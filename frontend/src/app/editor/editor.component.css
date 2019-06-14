@@ -1,0 +1,76 @@
+body {
+  font-family: sans-serif;
+}
+
+canvas {
+  float: left;
+}
+
+th {
+  font-family: sans-serif;
+}
+
+td {
+  font-family: sans-serif;
+}
+
+div.colour {
+  border: 2px solid white;
+  width: 40px;
+  height: 40px;
+  float: left;
+}
+
+div#output {
+  clear: both;
+  padding-top: 1em;
+}
+
+div#textinput {
+  clear: both;
+  padding-top: 0.5em;
+}
+
+div#sprites {
+}
+
+div#exits {
+  position: relative;
+}
+
+div#exits table {
+}
+
+div#maplist {
+  position: absolute;
+  border: 1px solid black;
+  top: 0.5em;
+  right: 0.5em;
+  width: 15em;
+  bottom: 0.5em;
+}
+
+div#maplist select {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+div#maplist {
+  position: absolute;
+  border: 1px solid black;
+  top: 0.5em;
+  right: 0.5em;
+  width: 15em;
+  bottom: 0.5em;
+}
+
+div#maplist select {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+div#controls > table > tbody > tr > td:first-child {
+  font-weight: bold;
+}

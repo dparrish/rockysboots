@@ -1,0 +1,54 @@
+<canvas id='board' [width]='canvasWidth' [height]='canvasHeight' (pointerdown)='pointerDown($event)' (pointerup)='pointerUp($event)' (mousemove)='mouseMove($event)' (mouseenter)='mouseEnter($event)' (mouseleave)='mouseLeave($event)'></canvas>
+
+<div id='controls'>
+  <table>
+    <tr>
+      <td>Name:</td>
+      <td><input type='text' [(ngModel)]='map.name' />&nbsp;<button (click)='saveMap(this.map)'>Save</button></td>
+    </tr>
+    <tr valign='top'>
+      <td>Sprites:</td>
+      <td>
+        <div *ngFor="let sprite of spriteNames; let i = index">
+          <label><input type='radio' name='currentSprite' [value]='sprite' [checked]='i === 0' (click)="currentSprite = Sprites[Sprites[sprite]]">{{Sprites[sprite]}}</label>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>Colours:</td>
+      <td><div class='colour' *ngFor="let colour of ['white', 'blue', 'red', 'lightgreen', 'orange', 'cyan', 'purple', 'gray']" [style.backgroundColor]='colour' style='float: left;' (click)='selectColour(colour)'>&nbsp;</div></td>
+    </tr>
+    <tr>
+      <td>Text:</td>
+      <td><input type='text' [(ngModel)]='currentText' /></td>
+    </tr>
+    <tr>
+      <td>Powered:</td>
+      <td><input type='checkbox' [(ngModel)]='currentPowered' /></td>
+    </tr>
+    <tr>
+      <td>Fixed:</td>
+      <td><input type='checkbox' [(ngModel)]='currentFixed' /></td>
+    </tr>
+    <tr>
+      <td>Exit Up:</td>
+      <td><input type='text' [(ngModel)]='map.exits.up'></td>
+    </tr>
+    <tr>
+      <td>Exit Down:</td>
+      <td><input type='text' [(ngModel)]='map.exits.down'></td>
+    </tr>
+    <tr>
+      <td>Exit Left:</td>
+      <td><input type='text' [(ngModel)]='map.exits.left'></td>
+    </tr>
+    <tr>
+      <td>Exit Right:</td>
+      <td><input type='text' [(ngModel)]='map.exits.right'></td>
+    </tr>
+  </table>
+  <div id='maplist'>
+    <select name='maplist' size='2'>
+    </select>
+  </div>
+</div>

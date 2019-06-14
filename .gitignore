@@ -1,0 +1,4 @@
+html/wasm_exec.js
+html/rockysboots.wasm
+node_modules
+editor/dist

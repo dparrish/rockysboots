@@ -1,0 +1,16 @@
+body {
+  font-family: Arial, sans-serif;
+}
+
+input[type=text] {
+  font-family: Arial, sans-serif;
+}
+
+textarea {
+  font-family: monospace;
+}
+
+@font-face {
+  font-family: 'Apple';
+  src: url('/assets/PrintChar21.ttf');
+}

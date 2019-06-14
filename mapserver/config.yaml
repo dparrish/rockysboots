@@ -1,0 +1,5 @@
+mysql:
+  host: mysql:3306
+  username: rockysboots
+  password: passwordgoeshere
+  database: rockysboots
