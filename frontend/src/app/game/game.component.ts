@@ -6,17 +6,8 @@ import {environment} from '../../environments/environment';
 import {constants} from '../constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from '../event-loop';
 import {GameMap, loadMap} from '../game-map';
-import {DrawSprite, Sprite, Sprites} from '../sprites';
-
-// X, Y
-type Position = [number, number];
-// Top-left, bottom-right
-interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import {BoundingBox, Point} from '../position';
+import {newSprite, Player, Sprite, Sprites} from '../sprites';
 
 @Component({selector: 'app-game', templateUrl: './game.component.html', styleUrls: ['./game.component.css']})
 export class GameComponent implements AfterViewInit {
@@ -26,6 +17,7 @@ export class GameComponent implements AfterViewInit {
   map: GameMap = new GameMap();
   maps: {[name: string]: GameMap} = {};
   tickCount = 0;
+  player: Player = null;
   modifiers: {[name: string]: boolean} = {
     shift: false,
     control: false,
@@ -63,12 +55,29 @@ export class GameComponent implements AfterViewInit {
       this.map = this.maps[name];
       return Promise.resolve(this.map);
     }
-    return loadMap(name).then((map) => {
-      console.log(`Loaded map ${name}`);
-      this.map = map;
-      this.maps[name] = map;
-      return map;
-    });
+    return loadMap(name)
+        .then((map) => {
+          console.log(`Loaded map ${name}`);
+          this.map = map;
+          this.map.sprites = _.map(map.sprites, newSprite);
+          this.maps[name] = map;
+          if (!this.player) {
+            this.player = newSprite({
+              x: this.map.playerStart.x,
+              y: this.map.playerStart.y,
+              type: Sprites.Player,
+            });
+          }
+          return map;
+        })
+        .then(map => {
+          for (const s of map.sprites) {
+            // Set up the initial power states.
+            if (!s.powerable) continue;
+            if (s.type === Sprites.NotGate) s.powered = true;
+          }
+          return map;
+        });
   }
 
   async drawMap() {
@@ -83,21 +92,16 @@ export class GameComponent implements AfterViewInit {
 
     // Draw existing sprites.
     for (const s of this.map.sprites) {
-      DrawSprite(ctx, s);
+      s.draw(ctx);
     }
 
     // Draw player.
-    DrawSprite(ctx, {
-      x: this.map.playerStart.x,
-      y: this.map.playerStart.y,
-      type: Sprites.Player,
-    } as Sprite);
+    this.player.draw(ctx);
   }
 
   checkPlayerPower() {
     for (const s of this.map.sprites) {
-      if (powerable(s) &&
-          boxesCollide(blockBoundingBox(this.map.playerStart.x, this.map.playerStart.y), blockBoundingBox(s.x, s.y))) {
+      if (s.powerable && this.player.boundingbox.intersects(s.boundingbox)) {
         this.eventLoop.queue(new Event(afterMs(0), (event): Promise<any> => {
           console.log(`Player powering`, s);
           s.powered = true;
@@ -118,7 +122,7 @@ export class GameComponent implements AfterViewInit {
     // Wait for all events to fire continuing.
     await this.eventLoop.runTick(this.tickCount);
 
-    for (const s of _.filter(this.map.sprites, powerable)) {
+    for (const s of _.filter(this.map.sprites, s => s.powerable)) {
       if (!s.lastPower) {
         // Set the initial power state for each sprite.
         s.lastPower = this.tickCount;
@@ -127,13 +131,13 @@ export class GameComponent implements AfterViewInit {
     }
 
     for (const s of this.map.sprites) {
-      if (powerable(s)) {
+      if (s.powerable) {
         this.spreadPower(s);
       }
     }
 
     for (const s of this.map.sprites) {
-      if (!powerable(s)) {
+      if (!s.powerable) {
         continue;
       }
       if (s.powered && s.lastPower < this.tickCount) {
@@ -147,34 +151,35 @@ export class GameComponent implements AfterViewInit {
     // Each sprite can only spread power once per tick.
     if (s.powerSpread === this.tickCount) return;
 
-    let pos: Position;
+    let pos: Point;
     switch (s.type) {
       case Sprites.ConnectorUp:
-        if (s.powered) pos = [s.x, s.y - constants.blockSize];
+        if (s.powered) pos = s.pos.add(0, -constants.blockSize);
         break;
 
       case Sprites.ConnectorDown:
-        if (s.powered) pos = [s.x, s.y + constants.blockSize];
+        if (s.powered) pos = s.pos.add(0, constants.blockSize);
         break;
 
       case Sprites.ConnectorLeft:
-        if (s.powered) pos = [s.x - constants.blockSize, s.y];
+        if (s.powered) pos = s.pos.add(-constants.blockSize, 0);
         break;
 
       case Sprites.ConnectorRight:
-        if (s.powered) pos = [s.x + constants.blockSize, s.y];
+        if (s.powered) pos = s.pos.add(constants.blockSize, 0);
         break;
 
       case Sprites.NotGate:
-        if (!s.powered) pos = [s.x - (2 * constants.blockSize), s.y];
+        if (!s.powered) pos = s.pos.add((-2 * constants.blockSize), 0);
         break;
 
       default:
         return;
     }
+    if (!pos) return;
 
     // Spread power to any powerable sprites at the destination position.
-    for (const dest of _.filter(this.spritesAt(pos), powerable)) {
+    for (const dest of _.filter(this.spritesAt(pos), s => s.powerable)) {
       // console.log(`Sprite ${this.spriteName(s)} powering ${this.spriteName(dest)}`);
       dest.powered = true;
 
@@ -187,35 +192,35 @@ export class GameComponent implements AfterViewInit {
     }
   }
 
-  spritesAt(pos: Position): any[] {
-    return _.filter(_.filter(this.map.sprites, (s) => s.y === pos[1] && s.x === pos[0]), powerable);
+  spritesAt(pos: Point): any[] {
+    return _.filter(_.filter(this.map.sprites, (s) => s.y === pos.y && s.x === pos.x), s => s.powerable);
   }
 
-  canMoveTo(pos: Position): boolean {
+  canMoveTo(pos: Point): boolean {
     return !_.find(this.map.sprites, (s) => {
       if (s.type !== Sprites.Wall && s.type !== Sprites.OptionWall) return false;
-      return boxesCollide(blockBoundingBox(pos[0], pos[1]), blockBoundingBox(s.x, s.y));
+      return s.boundingbox.intersects(blockBoundingBox(pos.x, pos.y));
     });
   }
 
   async keyDown(event) {
     const distance = this.modifiers.shift ? 10 : constants.blockSize;
-    const pos = [this.map.playerStart.x, this.map.playerStart.y] as Position;
+    const pos = this.player.pos;
     switch (event.code) {
       case 'ArrowUp':
-        pos[1] -= distance;
+        pos.y -= distance;
         if (!this.canMoveTo(pos)) return;
         break;
       case 'ArrowDown':
-        pos[1] += distance;
+        pos.y += distance;
         if (!this.canMoveTo(pos)) return;
         break;
       case 'ArrowLeft':
-        pos[0] -= distance;
+        pos.x -= distance;
         if (!this.canMoveTo(pos)) return;
         break;
       case 'ArrowRight':
-        pos[0] += distance;
+        pos.x += distance;
         if (!this.canMoveTo(pos)) return;
         break;
       case 'ShiftLeft':
@@ -231,38 +236,39 @@ export class GameComponent implements AfterViewInit {
     }
 
     // Valid movement.
-    this.map.playerStart.x = pos[0];
-    this.map.playerStart.y = pos[1];
-    this.checkPlayerPower();
+    this.player.x = pos.x;
+    this.player.y = pos.y;
 
-    if (this.map.playerStart.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
+    if (this.map.exits.right && this.player.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
       // Moved to the right.
       return this.loadMap(this.map.exits.right).then((map) => {
-        this.map.playerStart.x = 0;
-        this.map.playerStart.y = pos[1];
+        this.player.x = 0;
+        this.player.y = pos.y;
       });
     }
-    if (this.map.playerStart.x < 0) {
+    if (this.map.exits.left && this.player.x < 0) {
       // Moved to the left.
       return this.loadMap(this.map.exits.left).then((map) => {
-        this.map.playerStart.x = (constants.sizeX - 1) * constants.blockSize;
-        this.map.playerStart.y = pos[1];
+        this.player.x = (constants.sizeX - 1) * constants.blockSize;
+        this.player.y = pos.y;
       });
     }
-    if (this.map.playerStart.y < 0) {
+    if (this.map.exits.up && this.player.y < 0) {
       // Moved to the top.
       return this.loadMap(this.map.exits.up).then((map) => {
-        this.map.playerStart.x = pos[0];
-        this.map.playerStart.y = (constants.sizeY - 1) * constants.blockSize;
+        this.player.x = pos.x;
+        this.player.y = (constants.sizeY - 1) * constants.blockSize;
       });
     }
-    if (this.map.playerStart.y + constants.blockSize - 1 >= constants.sizeY * constants.blockSize) {
+    if (this.map.exits.down && this.player.y + constants.blockSize - 1 >= constants.sizeY * constants.blockSize) {
       // Moved to the bottom.
       return this.loadMap(this.map.exits.down).then((map) => {
-        this.map.playerStart.x = pos[0];
-        this.map.playerStart.y = 0;
+        this.player.x = pos.x;
+        this.player.y = 0;
       });
     }
+
+    this.checkPlayerPower();
   }
 
   keyUp(event) {
@@ -290,26 +296,6 @@ export class GameComponent implements AfterViewInit {
   mouseMove(event) {}
 }
 
-function boxesCollide(a: BoundingBox, b: BoundingBox) {
-  return ((Math.abs(a.x - b.x) * 2 < a.width + b.width) && (Math.abs(a.y - b.y) * 2 < a.height + b.height));
-}
-
 function blockBoundingBox(x: number, y: number): BoundingBox {
-  return {
-    x,
-    y,
-    width: constants.blockSize - 1,
-    height: constants.blockSize - 1,
-  };
-}
-
-function powerable(s: Sprite): boolean {
-  if (s.type === Sprites.Wall || s.type === Sprites.Text || s.type === Sprites.Empty) {
-    return false;
-  }
-  return true;
-}
-
-function isAt(s: Sprite, pos: Position): boolean {
-  return s.x === pos[0] && s.y === pos[1];
+  return new BoundingBox(new Point(x, y), constants.blockSize - 1, constants.blockSize - 1);
 }

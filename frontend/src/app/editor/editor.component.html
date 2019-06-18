@@ -27,6 +27,10 @@
       <td><input type='checkbox' [(ngModel)]='currentPowered' /></td>
     </tr>
     <tr>
+      <td>Draw Grid:</td>
+      <td><input type='checkbox' [(ngModel)]='drawGrid' /></td>
+    </tr>
+    <tr>
       <td>Fixed:</td>
       <td><input type='checkbox' [(ngModel)]='currentFixed' /></td>
     </tr>
@@ -45,6 +49,10 @@
     <tr>
       <td>Exit Right:</td>
       <td><input type='text' [(ngModel)]='map.exits.right'></td>
+    </tr>
+    <tr>
+      <td>Json:</td>
+      <td><textarea rows='40' cols='80' [(ngModel)]='currentJson'></textarea></td>
     </tr>
   </table>
   <div id='maplist'>

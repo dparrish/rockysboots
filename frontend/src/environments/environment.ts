@@ -7,7 +7,7 @@ export const environment = {
   drawGrid: true,
   mapserverUrl: 'https://rockysboots.dparrish.com/api/v1',
   msPerTick: 1000 / 1,
-  initialMap: 'oscillator-test',
+  initialMap: 'game-start',
 };
 
 /*

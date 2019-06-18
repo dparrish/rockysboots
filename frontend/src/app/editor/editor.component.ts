@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 import {environment} from '../../environments/environment';
 import {constants} from '../constants/constants.module';
 import {GameMap, loadMap} from '../game-map';
-import {DrawSprite, Sprite, Sprites} from '../sprites';
+import {newSprite, Player, Sprite, Sprites} from '../sprites';
 
 const snapSize = 10;
 const directions = ['up', 'down', 'left', 'right'];
@@ -29,12 +29,17 @@ export class EditorComponent implements AfterViewInit {
   currentText = 'Text here';
   currentFixed = false;
   currentPowered = false;
+  currentJson = '';
   moveSnap = true;
   mapList: string[] = [];
   Sprites: any;
   spriteNames: string[] = [];
+  drawGrid: boolean = true;
+  playerSprite: Player = null;
+  tempSprite: Sprite = null;
 
   constructor() {
+    constants.inEditor = true;
     this.Sprites = Sprites;
     const sn = Object.keys(Sprites);
     this.spriteNames = sn.slice(0, sn.length / 2);
@@ -67,8 +72,8 @@ export class EditorComponent implements AfterViewInit {
       this.selectColour('white');
 
       await this.loadMapList();
-      await this.loadMap('empty');
-      setInterval(() => {
+      await this.loadMap('sprite-test');
+      window.setInterval(() => {
         this.drawMap();
       }, 1000 / 30);
       window.setInterval(() => {
@@ -85,34 +90,8 @@ export class EditorComponent implements AfterViewInit {
     ctx.strokeStyle = 'black';
     ctx.fillRect(0, 0, constants.sizeX * constants.blockSize, constants.sizeY * constants.blockSize);
 
-    // Draw existing sprites.
-    for (const s of this.map.sprites) {
-      DrawSprite(ctx, s);
-    }
-
-    // Draw new sprite if mouse is down.
-    if (this.pointer.down) {
-      DrawSprite(ctx, {
-        x: this.pointer.x,
-        y: this.pointer.y,
-        type: this.currentSprite as Sprites,
-        colour: this.currentColour,
-        powered: this.currentPowered,
-        text: this.currentText,
-      } as Sprite);
-    }
-
-    // Draw player
-    if (!this.pointer.down || (this.pointer.down && this.currentSprite !== Sprites.Player)) {
-      DrawSprite(ctx, {
-        x: this.map.playerStart.x,
-        y: this.map.playerStart.y,
-        type: Sprites.Player,
-      } as Sprite);
-    }
-
     // Draw grid overlay.
-    if (constants.inEditor && environment.drawGrid) {
+    if (constants.inEditor && this.drawGrid) {
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'grey';
       for (let x = 0; x < constants.sizeX; x++) {
@@ -122,6 +101,21 @@ export class EditorComponent implements AfterViewInit {
               (y + 1) * constants.blockSize);
         }
       }
+    }
+
+    // Draw existing sprites.
+    for (const s of this.map.sprites) {
+      s.draw(ctx);
+    }
+
+    // Draw new sprite if mouse is down.
+    if (this.pointer.down && this.tempSprite) {
+      this.tempSprite.draw(ctx);
+    }
+
+    // Draw player
+    if (!this.pointer.down || (this.pointer.down && this.currentSprite !== Sprites.Player)) {
+      this.playerSprite.draw(ctx);
     }
   }
 
@@ -156,26 +150,14 @@ export class EditorComponent implements AfterViewInit {
     if (this.currentSprite === Sprites.Player) {
       this.map.playerStart.x = this.pointer.x;
       this.map.playerStart.y = this.pointer.y;
+      this.playerSprite.x = this.pointer.x;
+      this.playerSprite.y = this.pointer.y;
       return;
     }
     _.remove(this.map.sprites, (el) => el.x === this.pointer.x && el.y === this.pointer.y);
-    const s: Sprite = {
-      colour: this.currentColour,
-      text: undefined,
-      type: this.currentSprite,
-      x: this.pointer.x,
-      y: this.pointer.y,
-      fixed: this.currentFixed,
-    };
-    if (this.currentSprite === Sprites.Text) {
-      s.text = this.currentText;
-      if (this.currentText === '') {
-        return;
-      }
-    }
-    s.powered = this.currentPowered;
-    this.map.sprites.push(s);
+    this.map.sprites.push(this.tempSprite);
     this.map.sortSprites();
+    this.tempSprite = null;
   }
 
   pointerDown(event: any) {
@@ -183,18 +165,32 @@ export class EditorComponent implements AfterViewInit {
     this.pointer.x = event.offsetX;
     this.pointer.y = event.offsetY;
     this.snapPointer();
+    this.tempSprite = newSprite({
+      x: this.pointer.x,
+      y: this.pointer.y,
+      type: this.currentSprite,
+      colour: this.currentColour,
+      powered: this.currentPowered,
+      text: this.currentText,
+    });
+
     event.cancelBubble = true;
   }
 
   pointerUp(event: any) {
     this.pointer.down = false;
     this.dropSprite();
+    this.tempSprite = null;
   }
 
   mouseMove(event: any) {
     this.pointer.x = event.offsetX;
     this.pointer.y = event.offsetY;
     this.snapPointer();
+    if (this.tempSprite) {
+      this.tempSprite.x = this.pointer.x;
+      this.tempSprite.y = this.pointer.y;
+    }
   }
 
   mouseEnter(event: any) {
@@ -223,9 +219,6 @@ export class EditorComponent implements AfterViewInit {
           this.mapList = json.maps;
           this.mapList.sort();
           this.updateMapList();
-          if (this.map.name === '') {
-            return this.loadMap('sprite-test');
-          }
           return null;
         });
   }
@@ -245,8 +238,13 @@ export class EditorComponent implements AfterViewInit {
   }
 
   loadMap(name: string): Promise<any> {
-    return loadMap(name).then((map) => {
+    return loadMap(name).then(map => {
       this.map = map;
+      this.map.sprites = _.map(map.sprites, newSprite);
+      this.playerSprite = new Player({
+        x: this.map.playerStart.x,
+        y: this.map.playerStart.y,
+      });
       this.updateExitsTicks();
       return map;
     });
@@ -279,42 +277,42 @@ export class EditorComponent implements AfterViewInit {
     switch (direction) {
       case 'up':
         for (let i = 0; i < constants.sizeX; i++) {
-          sprites.push({
+          sprites.push(newSprite({
             colour: 'blue',
             type: Sprites.Wall,
             x: i * constants.blockSize,
             y: 0,
-          });
+          }));
         }
         break;
       case 'down':
         for (let i = 0; i < constants.sizeX; i++) {
-          sprites.push({
+          sprites.push(newSprite({
             colour: 'blue',
             type: Sprites.Wall,
             x: i * constants.blockSize,
             y: (constants.sizeY - 1) * constants.blockSize,
-          });
+          }));
         }
         break;
       case 'left':
         for (let i = 0; i < constants.sizeY; i++) {
-          sprites.push({
+          sprites.push(newSprite({
             colour: 'blue',
             type: Sprites.Wall,
             x: 0,
             y: i * constants.blockSize,
-          });
+          }));
         }
         break;
       case 'right':
         for (let i = 0; i < constants.sizeY; i++) {
-          sprites.push({
+          sprites.push(newSprite({
             colour: 'blue',
             type: Sprites.Wall,
             x: (constants.sizeX - 1) * constants.blockSize,
             y: i * constants.blockSize,
-          });
+          }));
         }
         break;
       default:
@@ -354,6 +352,8 @@ export class EditorComponent implements AfterViewInit {
     if (map.name === '') {
       throw new Error('Invalid map name');
     }
+    this.currentJson = JSON.stringify(map, null, 2);
+
     try {
       if (!forceInvalidExits) {
         await this.validExits();

@@ -5,6 +5,6 @@ export const constants = {
   blockSize: 40,
   sizeX: 20,
   sizeY: 12,
-  inEditor: true,
+  inEditor: false,
 };
 
