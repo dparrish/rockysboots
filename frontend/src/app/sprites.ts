@@ -34,14 +34,17 @@ export class Sprite {
   x: number;
   y: number;
   colour: string;
-  powered: boolean;
-  powerable: boolean;
-  fixed: boolean;
+  fixed: boolean = false;
+  passable: boolean = true;
+
   lastPower: number;
   powerSpread: number;
+  powerable: boolean = false;
+  powered: boolean = false;
+  inputs: Point[] = [];
+  outputs: Point[] = [];
 
   constructor(json?: any) {
-    this.powerable = false;
     if (json) this.fromJson(json);
   }
 
@@ -61,18 +64,6 @@ export class Sprite {
     return new BoundingBox(new Point(this.x, this.y), blockSize, blockSize);
   }
 
-  get passable(): boolean {
-    return true;
-  }
-
-  get inputs(): Point[] {
-    return [];
-  }
-
-  get outputs(): Point[] {
-    return [];
-  }
-
   draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
     ctx.strokeStyle = this.colour;
@@ -82,6 +73,7 @@ export class Sprite {
   }
 
   finishDraw(ctx: CanvasRenderingContext2D) {
+    ctx.restore();
     if (constants.inEditor) {
       // Draw circles around inputs.
       for (const pos of this.inputs) {
@@ -104,24 +96,27 @@ export class Sprite {
         ctx.stroke();
         ctx.restore();
       }
+
+      // Draw bounding box.
+      ctx.save();
+      ctx.strokeStyle = 'darkgray';
+      const bb = this.boundingbox;
+      ctx.strokeRect(bb.topleft.x, bb.topleft.y, bb.width, bb.height);
+      ctx.restore();
     }
-    ctx.restore();
   }
 
+  jsonFields = ['type', 'text', 'x', 'y', 'colour', 'powered', 'fixed']
   toJson(): object {
-    return {
-      type: this.type,
-      text: this.text,
-      x: this.x,
-      y: this.y,
-      colour: this.colour,
-      powered: this.powered,
-      fixed: this.fixed,
-    } as object;
+    const json = {};
+    for (const field of this.jsonFields) {
+      json[field] = this[field];
+    }
+    return json
   }
 
   fromJson(json: object): Sprite {
-    for (const field of ['type', 'text', 'x', 'y', 'colour', 'powered', 'fixed']) {
+    for (const field of this.jsonFields) {
       if (json[field] !== undefined) this[field] = json[field];
     }
     return this;
@@ -194,6 +189,8 @@ export class Player extends Sprite {
 export class Wall extends Sprite {
   constructor(json?: any) {
     super(json);
+    this.passable = false;
+    this.fixed = true;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -201,16 +198,15 @@ export class Wall extends Sprite {
     ctx.drawImage(wallSprite, this.x, this.y);
     super.finishDraw(ctx);
   }
-
-  get passable(): boolean {
-    return false;
-  }
 }
 
 export class OptionWall extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.passable = false;
+    this.fixed = true;
+    this.inputs = [new Point(20, 20)];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -232,15 +228,12 @@ export class OptionWall extends Sprite {
     }
     super.finishDraw(ctx);
   }
-
-  get passable(): boolean {
-    return false;
-  }
 }
 
 export class Text extends Sprite {
   constructor(json?: any) {
     super(json);
+    this.fixed = true;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -250,11 +243,16 @@ export class Text extends Sprite {
     ctx.fillText(this.text, this.x, this.y);
     super.finishDraw(ctx);
   }
+
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x, this.y), blockSize * 0.46 * this.text.length, blockSize / 2);
+  }
 }
 
 export class Boot extends Sprite {
   constructor(json?: any) {
     super(json);
+    this.inputs = [new Point(20, 20)];
     this.powerable = true;
   }
 
@@ -263,16 +261,17 @@ export class Boot extends Sprite {
     ctx.drawImage(bootSprite, this.x, this.y);
     super.finishDraw(ctx);
   }
-
-  get inputs(): Point[] {
-    return [new Point(20, 20)];
-  }
 }
 
 export class AndGate extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.inputs = [
+      new Point(20, 10),
+      new Point(20, 30),
+    ];
+    this.outputs = [new Point(-60, 20)];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -303,15 +302,8 @@ export class AndGate extends Sprite {
     super.finishDraw(ctx);
   }
 
-  get inputs(): Point[] {
-    return [
-      new Point(20, 10),
-      new Point(20, 30),
-    ];
-  }
-
-  get outputs(): Point[] {
-    return [new Point(-60, 20)];
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x - blockSize * 2, this.y), blockSize * 3, blockSize);
   }
 }
 
@@ -319,6 +311,9 @@ export class NotGate extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.inputs = [new Point(20, blockSize / 2)];
+    this.outputs = [new Point(-60, 20)];
+    this.passable = false;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -349,12 +344,8 @@ export class NotGate extends Sprite {
     super.finishDraw(ctx);
   }
 
-  get inputs(): Point[] {
-    return [new Point(20, blockSize / 2)];
-  }
-
-  get outputs(): Point[] {
-    return [new Point(-60, 20)];
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x - blockSize * 2, this.y), blockSize * 3, blockSize);
   }
 }
 
@@ -362,6 +353,12 @@ export class OrGate extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.inputs = [
+      new Point(20, 10),
+      new Point(20, 30),
+    ];
+
+    this.outputs = [new Point(-60, 20)];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -407,15 +404,8 @@ export class OrGate extends Sprite {
     super.finishDraw(ctx);
   }
 
-  get inputs(): Point[] {
-    return [
-      new Point(20, 10),
-      new Point(20, 30),
-    ];
-  }
-
-  get outputs(): Point[] {
-    return [new Point(-60, 20)];
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x - blockSize * 2, this.y), blockSize * 3, blockSize);
   }
 }
 
@@ -457,6 +447,8 @@ export class ConnectorLeft extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.inputs = [new Point(20, 20)];
+    this.outputs = [new Point(-20, 20)];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -472,12 +464,8 @@ export class ConnectorLeft extends Sprite {
     super.finishDraw(ctx);
   }
 
-  get inputs(): Point[] {
-    return [new Point(20, 20)];
-  }
-
-  get outputs(): Point[] {
-    return [new Point(-20, 20)];
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x - blockSize, this.y), 2 * blockSize, blockSize);
   }
 }
 
@@ -485,6 +473,8 @@ export class ConnectorRight extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.inputs = [new Point(20, 20)];
+    this.outputs = [new Point(60, 20)];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -500,12 +490,8 @@ export class ConnectorRight extends Sprite {
     super.finishDraw(ctx);
   }
 
-  get inputs(): Point[] {
-    return [new Point(20, 20)];
-  }
-
-  get outputs(): Point[] {
-    return [new Point(60, 20)];
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x, this.y), 2 * blockSize, blockSize);
   }
 }
 
@@ -513,6 +499,8 @@ export class ConnectorUp extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.inputs = [new Point(20, 20)];
+    this.outputs = [new Point(20, -20)];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -528,12 +516,8 @@ export class ConnectorUp extends Sprite {
     super.finishDraw(ctx);
   }
 
-  get inputs(): Point[] {
-    return [new Point(20, 20)];
-  }
-
-  get outputs(): Point[] {
-    return [new Point(20, -20)];
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x, this.y - blockSize), blockSize, blockSize * 2);
   }
 }
 
@@ -541,6 +525,8 @@ export class ConnectorDown extends Sprite {
   constructor(json?: any) {
     super(json);
     this.powerable = true;
+    this.inputs = [new Point(20, 20)];
+    this.outputs = [new Point(20, 60)];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -556,12 +542,8 @@ export class ConnectorDown extends Sprite {
     super.finishDraw(ctx);
   }
 
-  get inputs(): Point[] {
-    return [new Point(20, 20)];
-  }
-
-  get outputs(): Point[] {
-    return [new Point(20, 60)];
+  get boundingbox(): BoundingBox {
+    return new BoundingBox(new Point(this.x, this.y), blockSize, blockSize * 2);
   }
 }
 

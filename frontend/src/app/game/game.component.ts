@@ -197,8 +197,8 @@ export class GameComponent implements AfterViewInit {
   }
 
   canMoveTo(pos: Point): boolean {
-    return !_.find(this.map.sprites, (s) => {
-      if (s.type !== Sprites.Wall && s.type !== Sprites.OptionWall) return false;
+    return !_.find(this.map.sprites, s => {
+      if (s.passable) return false;
       return s.boundingbox.intersects(blockBoundingBox(pos.x, pos.y));
     });
   }

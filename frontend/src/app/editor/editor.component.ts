@@ -34,7 +34,7 @@ export class EditorComponent implements AfterViewInit {
   mapList: string[] = [];
   Sprites: any;
   spriteNames: string[] = [];
-  drawGrid: boolean = true;
+  drawGrid: boolean = false;
   playerSprite: Player = null;
   tempSprite: Sprite = null;
 
@@ -171,7 +171,7 @@ export class EditorComponent implements AfterViewInit {
       type: this.currentSprite,
       colour: this.currentColour,
       powered: this.currentPowered,
-      text: this.currentText,
+      text: constants.formatText(this.currentText),
     });
 
     event.cancelBubble = true;
