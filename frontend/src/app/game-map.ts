@@ -46,7 +46,7 @@ export function loadMap(name: string): Promise<GameMap> {
       .then((response: Response) => {
         return response.json();
       })
-      .then(json => {
+      .then((json) => {
         if (!json || !json.map || json.status !== 'OK') {
           console.log('Error loading map', json);
           return new GameMap();

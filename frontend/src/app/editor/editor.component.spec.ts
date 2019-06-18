@@ -1,16 +1,17 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import {async, ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { EditorComponent } from './editor.component';
+import {EditorComponent} from './editor.component';
 
 describe('EditorComponent', () => {
   let component: EditorComponent;
   let fixture: ComponentFixture<EditorComponent>;
 
   beforeEach(async(() => {
-    TestBed.configureTestingModule({
-      declarations: [ EditorComponent ]
-    })
-    .compileComponents();
+    return TestBed
+        .configureTestingModule({
+          declarations: [EditorComponent],
+        })
+        .compileComponents();
   }));
 
   beforeEach(() => {

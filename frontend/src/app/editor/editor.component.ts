@@ -41,22 +41,22 @@ export class EditorComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      window.addEventListener('selectstart', event => {
+    setTimeout(async () => {
+      window.addEventListener('selectstart', (event) => {
         if ((event.target as HTMLInputElement).type === 'text') {
           return;
         }
         event.preventDefault();
       });
 
-      window.addEventListener('keydown', event => {
+      window.addEventListener('keydown', (event) => {
         if (event.code === 'ShiftLeft') {
           this.moveSnap = false;
           event.cancelBubble = true;
         }
       });
 
-      window.addEventListener('keyup', event => {
+      window.addEventListener('keyup', (event) => {
         if (event.code === 'ShiftLeft') {
           this.moveSnap = true;
           event.cancelBubble = true;
@@ -65,9 +65,9 @@ export class EditorComponent implements AfterViewInit {
 
       this.map.name = 'test-map';
       this.selectColour('white');
-      this.loadMapList().then(loaded => {
-        this.loadMap('empty');
-      });
+
+      await this.loadMapList();
+      await this.loadMap('empty');
       setInterval(() => {
         this.drawMap();
       }, 1000 / 30);
@@ -150,7 +150,7 @@ export class EditorComponent implements AfterViewInit {
   dropSprite() {
     if (this.currentSprite === Sprites.Empty) {
       // console.log(`Removing all sprites at at ${this.pointer.x} / ${this.pointer.y}`);
-      _.remove(this.map.sprites, el => el.x === this.pointer.x && el.y === this.pointer.y);
+      _.remove(this.map.sprites, (el) => el.x === this.pointer.x && el.y === this.pointer.y);
       return;
     }
     if (this.currentSprite === Sprites.Player) {
@@ -158,7 +158,7 @@ export class EditorComponent implements AfterViewInit {
       this.map.playerStart.y = this.pointer.y;
       return;
     }
-    _.remove(this.map.sprites, el => el.x === this.pointer.x && el.y === this.pointer.y);
+    _.remove(this.map.sprites, (el) => el.x === this.pointer.x && el.y === this.pointer.y);
     const s: Sprite = {
       colour: this.currentColour,
       text: undefined,
@@ -218,7 +218,7 @@ export class EditorComponent implements AfterViewInit {
         .then((response: Response) => {
           return response.json();
         })
-        .then(json => {
+        .then((json) => {
           // console.log('Got maps list', json);
           this.mapList = json.maps;
           this.mapList.sort();
@@ -245,7 +245,7 @@ export class EditorComponent implements AfterViewInit {
   }
 
   loadMap(name: string): Promise<any> {
-    return loadMap(name).then(map => {
+    return loadMap(name).then((map) => {
       this.map = map;
       this.updateExitsTicks();
       return map;
@@ -262,13 +262,13 @@ export class EditorComponent implements AfterViewInit {
     }
     switch (direction) {
       case 'up':
-        return _.filter(this.map.sprites, s => s.y === 0 && isWall(s));
+        return _.filter(this.map.sprites, (s) => s.y === 0 && isWall(s));
       case 'down':
-        return _.filter(this.map.sprites, s => s.y === (constants.sizeY - 1) * constants.blockSize && isWall(s));
+        return _.filter(this.map.sprites, (s) => s.y === (constants.sizeY - 1) * constants.blockSize && isWall(s));
       case 'left':
-        return _.filter(this.map.sprites, s => s.x === 0 && isWall(s));
+        return _.filter(this.map.sprites, (s) => s.x === 0 && isWall(s));
       case 'right':
-        return _.filter(this.map.sprites, s => s.x === (constants.sizeX - 1) * constants.blockSize && isWall(s));
+        return _.filter(this.map.sprites, (s) => s.x === (constants.sizeX - 1) * constants.blockSize && isWall(s));
       default:
         return null;
     }
@@ -374,11 +374,12 @@ export class EditorComponent implements AfterViewInit {
         .then((response: Response) => {
           return response.json();
         })
-        .then(json => {
+        .then(async (json) => {
           this.mapList.push(map.name);
           this.mapList = _.uniqBy(this.mapList);
           this.mapList = this.mapList.sort();
           this.updateMapList();
+          const promises: Promise<any>[] = [];
 
           // Create adjoining maps if they don't yet exist.
           if (map.exits.up) {
@@ -400,7 +401,7 @@ export class EditorComponent implements AfterViewInit {
                 });
               }
               // console.log(`Creating map ${map.exits.up} up`, newMap);
-              this.saveMap(newMap, true);
+              promises.push(this.saveMap(newMap, true));
             }
           }
           if (map.exits.down) {
@@ -422,7 +423,7 @@ export class EditorComponent implements AfterViewInit {
                 });
               }
               // console.log(`Creating map ${map.exits.down} down`, newMap);
-              this.saveMap(newMap, true);
+              promises.push(this.saveMap(newMap, true));
             }
           }
           if (map.exits.left) {
@@ -444,7 +445,7 @@ export class EditorComponent implements AfterViewInit {
                 });
               }
               // console.log(`Creating map ${map.exits.left} left`, newMap);
-              this.saveMap(newMap, true);
+              promises.push(this.saveMap(newMap, true));
             }
           }
           if (map.exits.right) {
@@ -466,10 +467,10 @@ export class EditorComponent implements AfterViewInit {
                 });
               }
               // console.log(`Creating map ${map.exits.right} right`, newMap);
-              this.saveMap(newMap, true);
+              promises.push(this.saveMap(newMap, true));
             }
           }
-          return true;
+          return Promise.all(promises);
         });
   }
 }

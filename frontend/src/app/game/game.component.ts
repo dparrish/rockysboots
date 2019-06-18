@@ -35,27 +35,26 @@ export class GameComponent implements AfterViewInit {
   constructor(private eventLoop: EventLoop) {}
 
   ngAfterViewInit() {
-    setTimeout(() => {
+    setTimeout(async () => {
       window.addEventListener('selectstart', event => {
         event.preventDefault();
       });
 
-      window.addEventListener('keydown', event => {
-        this.keyDown(event);
+      window.addEventListener('keydown', async event => {
+        await this.keyDown(event);
       });
       window.addEventListener('keyup', event => {
         this.keyUp(event);
       });
 
-      this.loadMap(environment.initialMap).then(() => {
-        setInterval(() => {
-          this.drawMap();
-        }, 1000 / 30);
-        this.gameTick();
-        window.setInterval(() => {
-          this.gameTick();
-        }, environment.msPerTick);
-      });
+      await this.loadMap(environment.initialMap);
+      setInterval(async () => {
+        await this.drawMap();
+      }, 1000 / 30);
+      await this.gameTick();
+      window.setInterval(async () => {
+        await this.gameTick();
+      }, environment.msPerTick);
     }, 1);
   }
 
@@ -64,7 +63,7 @@ export class GameComponent implements AfterViewInit {
       this.map = this.maps[name];
       return Promise.resolve(this.map);
     }
-    return loadMap(name).then(map => {
+    return loadMap(name).then((map) => {
       console.log(`Loaded map ${name}`);
       this.map = map;
       this.maps[name] = map;
@@ -77,7 +76,6 @@ export class GameComponent implements AfterViewInit {
     await this.eventLoop.run();
 
     const canvas = document.getElementById('board') as HTMLCanvasElement;
-
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'black';
     ctx.strokeStyle = 'black';
@@ -88,7 +86,7 @@ export class GameComponent implements AfterViewInit {
       DrawSprite(ctx, s);
     }
 
-    // Draw player
+    // Draw player.
     DrawSprite(ctx, {
       x: this.map.playerStart.x,
       y: this.map.playerStart.y,
@@ -129,43 +127,8 @@ export class GameComponent implements AfterViewInit {
     }
 
     for (const s of this.map.sprites) {
-      if (!powerable(s)) {
-        continue;
-      }
-
-      switch (s.type) {
-        case Sprites.ConnectorUp:
-          if (s.powered) {
-            this.spreadPower(s, [s.x, s.y - constants.blockSize]);
-          }
-          break;
-
-        case Sprites.ConnectorDown:
-          if (s.powered) {
-            this.spreadPower(s, [s.x, s.y + constants.blockSize]);
-          }
-          break;
-
-        case Sprites.ConnectorLeft:
-          if (s.powered) {
-            this.spreadPower(s, [s.x - constants.blockSize, s.y]);
-          }
-          break;
-
-        case Sprites.ConnectorRight:
-          if (s.powered) {
-            this.spreadPower(s, [s.x + constants.blockSize, s.y]);
-          }
-          break;
-
-        case Sprites.NotGate:
-          if (!s.powered) {
-            this.spreadPower(s, [s.x - (2 * constants.blockSize), s.y]);
-          }
-          break;
-
-        default:
-          break;
+      if (powerable(s)) {
+        this.spreadPower(s);
       }
     }
 
@@ -180,10 +143,34 @@ export class GameComponent implements AfterViewInit {
     }
   }
 
-  spreadPower(s: Sprite, pos: Position) {
+  spreadPower(s: Sprite) {
     // Each sprite can only spread power once per tick.
-    if (s.powerSpread === this.tickCount) {
-      return;
+    if (s.powerSpread === this.tickCount) return;
+
+    let pos: Position;
+    switch (s.type) {
+      case Sprites.ConnectorUp:
+        if (s.powered) pos = [s.x, s.y - constants.blockSize];
+        break;
+
+      case Sprites.ConnectorDown:
+        if (s.powered) pos = [s.x, s.y + constants.blockSize];
+        break;
+
+      case Sprites.ConnectorLeft:
+        if (s.powered) pos = [s.x - constants.blockSize, s.y];
+        break;
+
+      case Sprites.ConnectorRight:
+        if (s.powered) pos = [s.x + constants.blockSize, s.y];
+        break;
+
+      case Sprites.NotGate:
+        if (!s.powered) pos = [s.x - (2 * constants.blockSize), s.y];
+        break;
+
+      default:
+        return;
     }
 
     // Spread power to any powerable sprites at the destination position.
@@ -192,9 +179,7 @@ export class GameComponent implements AfterViewInit {
       dest.powered = true;
 
       // Don't let this sprite immediately spread power.
-      if (dest.powerSpread < this.tickCount - 1) {
-        dest.powerSpread = this.tickCount;
-      }
+      if (dest.powerSpread < this.tickCount - 1) dest.powerSpread = this.tickCount;
 
       // Don't let this sprite spread power again this tick.
       s.powerSpread = this.tickCount;
@@ -203,45 +188,35 @@ export class GameComponent implements AfterViewInit {
   }
 
   spritesAt(pos: Position): any[] {
-    return _.filter(_.filter(this.map.sprites, s => s.y === pos[1] && s.x === pos[0]), powerable);
+    return _.filter(_.filter(this.map.sprites, (s) => s.y === pos[1] && s.x === pos[0]), powerable);
   }
 
   canMoveTo(pos: Position): boolean {
-    return !_.find(this.map.sprites, s => {
-      if (s.type !== Sprites.Wall && s.type !== Sprites.OptionWall) {
-        return false;
-      }
+    return !_.find(this.map.sprites, (s) => {
+      if (s.type !== Sprites.Wall && s.type !== Sprites.OptionWall) return false;
       return boxesCollide(blockBoundingBox(pos[0], pos[1]), blockBoundingBox(s.x, s.y));
     });
   }
 
-  keyDown(event): Promise<any> {
+  async keyDown(event) {
     const distance = this.modifiers.shift ? 10 : constants.blockSize;
     const pos = [this.map.playerStart.x, this.map.playerStart.y] as Position;
     switch (event.code) {
       case 'ArrowUp':
         pos[1] -= distance;
-        if (!this.canMoveTo(pos)) {
-          return;
-        }
+        if (!this.canMoveTo(pos)) return;
         break;
       case 'ArrowDown':
         pos[1] += distance;
-        if (!this.canMoveTo(pos)) {
-          return;
-        }
+        if (!this.canMoveTo(pos)) return;
         break;
       case 'ArrowLeft':
         pos[0] -= distance;
-        if (!this.canMoveTo(pos)) {
-          return;
-        }
+        if (!this.canMoveTo(pos)) return;
         break;
       case 'ArrowRight':
         pos[0] += distance;
-        if (!this.canMoveTo(pos)) {
-          return;
-        }
+        if (!this.canMoveTo(pos)) return;
         break;
       case 'ShiftLeft':
       case 'ShiftRight':
@@ -262,28 +237,28 @@ export class GameComponent implements AfterViewInit {
 
     if (this.map.playerStart.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
       // Moved to the right.
-      return this.loadMap(this.map.exits.right).then(map => {
+      return this.loadMap(this.map.exits.right).then((map) => {
         this.map.playerStart.x = 0;
         this.map.playerStart.y = pos[1];
       });
     }
     if (this.map.playerStart.x < 0) {
       // Moved to the left.
-      return this.loadMap(this.map.exits.left).then(map => {
+      return this.loadMap(this.map.exits.left).then((map) => {
         this.map.playerStart.x = (constants.sizeX - 1) * constants.blockSize;
         this.map.playerStart.y = pos[1];
       });
     }
     if (this.map.playerStart.y < 0) {
       // Moved to the top.
-      return this.loadMap(this.map.exits.up).then(map => {
+      return this.loadMap(this.map.exits.up).then((map) => {
         this.map.playerStart.x = pos[0];
         this.map.playerStart.y = (constants.sizeY - 1) * constants.blockSize;
       });
     }
     if (this.map.playerStart.y + constants.blockSize - 1 >= constants.sizeY * constants.blockSize) {
       // Moved to the bottom.
-      return this.loadMap(this.map.exits.down).then(map => {
+      return this.loadMap(this.map.exits.down).then((map) => {
         this.map.playerStart.x = pos[0];
         this.map.playerStart.y = 0;
       });

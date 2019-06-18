@@ -44,8 +44,6 @@ export class EventLoop {
   tickQueue: Event[] = [];
   timeQueue: Event[] = [];
 
-  constructor() {}
-
   run(): Promise<any> {
     // Fire all the events that are currently ready right now.
     const promises: Promise<any>[] = [];
@@ -77,7 +75,7 @@ export class EventLoop {
     return Promise.all(promises);
   }
 
-  async queue(event: Event): Promise<any> {
+  queue(event: Event) {
     if (event.when.time >= 0) {
       this.timeQueue.push(event);
       this.timeQueue.sort((a: Event, b: Event): number => cmp(a.when.time, b.when.time));
@@ -85,7 +83,6 @@ export class EventLoop {
       this.tickQueue.push(event);
       this.tickQueue.sort((a: Event, b: Event): number => cmp(a.when.tick, b.when.tick));
     }
-    return true;
   }
 }
 
