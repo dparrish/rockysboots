@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {AfterViewInit, Component} from '@angular/core';
 import * as _ from 'lodash';
 import * as moment from 'moment';
 
@@ -19,17 +19,20 @@ interface BoundingBox {
 }
 
 @Component({selector: 'app-game', templateUrl: './game.component.html', styleUrls: ['./game.component.css']})
-export class GameComponent implements OnInit {
+export class GameComponent implements AfterViewInit {
   canvas: HTMLCanvasElement;
   canvasWidth = constants.sizeX * constants.blockSize;
   canvasHeight = constants.sizeY * constants.blockSize;
   map: GameMap = new GameMap();
   maps: {[name: string]: GameMap} = {};
-  tickCount: number = 0;
+  tickCount = 0;
+  modifiers: {[name: string]: boolean} = {
+    shift: false,
+    control: false,
+    alt: false,
+  };
 
   constructor(private eventLoop: EventLoop) {}
-
-  ngOnInit() {}
 
   ngAfterViewInit() {
     setTimeout(() => {
@@ -45,9 +48,13 @@ export class GameComponent implements OnInit {
       });
 
       this.loadMap(environment.initialMap).then(() => {
-        setInterval(() => {this.drawMap()}, 1000 / 30);
+        setInterval(() => {
+          this.drawMap();
+        }, 1000 / 30);
         this.gameTick();
-        window.setInterval(() => {this.gameTick()}, environment.msPerTick);
+        window.setInterval(() => {
+          this.gameTick();
+        }, environment.msPerTick);
       });
     }, 1);
   }
@@ -122,27 +129,39 @@ export class GameComponent implements OnInit {
     }
 
     for (const s of this.map.sprites) {
-      if (!powerable(s)) continue;
+      if (!powerable(s)) {
+        continue;
+      }
 
       switch (s.type) {
         case Sprites.ConnectorUp:
-          if (s.powered) this.spreadPower(s, [s.x, s.y - constants.blockSize]);
+          if (s.powered) {
+            this.spreadPower(s, [s.x, s.y - constants.blockSize]);
+          }
           break;
 
         case Sprites.ConnectorDown:
-          if (s.powered) this.spreadPower(s, [s.x, s.y + constants.blockSize]);
+          if (s.powered) {
+            this.spreadPower(s, [s.x, s.y + constants.blockSize]);
+          }
           break;
 
         case Sprites.ConnectorLeft:
-          if (s.powered) this.spreadPower(s, [s.x - constants.blockSize, s.y]);
+          if (s.powered) {
+            this.spreadPower(s, [s.x - constants.blockSize, s.y]);
+          }
           break;
 
         case Sprites.ConnectorRight:
-          if (s.powered) this.spreadPower(s, [s.x + constants.blockSize, s.y]);
+          if (s.powered) {
+            this.spreadPower(s, [s.x + constants.blockSize, s.y]);
+          }
           break;
 
         case Sprites.NotGate:
-          if (!s.powered) this.spreadPower(s, [s.x - (2 * constants.blockSize), s.y]);
+          if (!s.powered) {
+            this.spreadPower(s, [s.x - (2 * constants.blockSize), s.y]);
+          }
           break;
 
         default:
@@ -151,7 +170,9 @@ export class GameComponent implements OnInit {
     }
 
     for (const s of this.map.sprites) {
-      if (!powerable(s)) continue;
+      if (!powerable(s)) {
+        continue;
+      }
       if (s.powered && s.lastPower < this.tickCount) {
         s.powered = false;
         s.lastPower = this.tickCount;
@@ -161,7 +182,9 @@ export class GameComponent implements OnInit {
 
   spreadPower(s: Sprite, pos: Position) {
     // Each sprite can only spread power once per tick.
-    if (s.powerSpread === this.tickCount) return;
+    if (s.powerSpread === this.tickCount) {
+      return;
+    }
 
     // Spread power to any powerable sprites at the destination position.
     for (const dest of _.filter(this.spritesAt(pos), powerable)) {
@@ -169,7 +192,9 @@ export class GameComponent implements OnInit {
       dest.powered = true;
 
       // Don't let this sprite immediately spread power.
-      if (dest.powerSpread < this.tickCount - 1) dest.powerSpread = this.tickCount;
+      if (dest.powerSpread < this.tickCount - 1) {
+        dest.powerSpread = this.tickCount;
+      }
 
       // Don't let this sprite spread power again this tick.
       s.powerSpread = this.tickCount;
@@ -181,38 +206,42 @@ export class GameComponent implements OnInit {
     return _.filter(_.filter(this.map.sprites, s => s.y === pos[1] && s.x === pos[0]), powerable);
   }
 
-  modifiers: {[name: string]: boolean} = {
-    shift: false,
-    control: false,
-    alt: false,
-  };
-
   canMoveTo(pos: Position): boolean {
     return !_.find(this.map.sprites, s => {
-      if (s.type != Sprites.Wall && s.type != Sprites.OptionWall) return false;
+      if (s.type !== Sprites.Wall && s.type !== Sprites.OptionWall) {
+        return false;
+      }
       return boxesCollide(blockBoundingBox(pos[0], pos[1]), blockBoundingBox(s.x, s.y));
     });
   }
 
   keyDown(event): Promise<any> {
-    let distance = this.modifiers.shift ? 10 : constants.blockSize;
-    let pos = [this.map.playerStart.x, this.map.playerStart.y] as Position;
+    const distance = this.modifiers.shift ? 10 : constants.blockSize;
+    const pos = [this.map.playerStart.x, this.map.playerStart.y] as Position;
     switch (event.code) {
       case 'ArrowUp':
         pos[1] -= distance;
-        if (!this.canMoveTo(pos)) return;
+        if (!this.canMoveTo(pos)) {
+          return;
+        }
         break;
       case 'ArrowDown':
         pos[1] += distance;
-        if (!this.canMoveTo(pos)) return;
+        if (!this.canMoveTo(pos)) {
+          return;
+        }
         break;
       case 'ArrowLeft':
         pos[0] -= distance;
-        if (!this.canMoveTo(pos)) return;
+        if (!this.canMoveTo(pos)) {
+          return;
+        }
         break;
       case 'ArrowRight':
         pos[0] += distance;
-        if (!this.canMoveTo(pos)) return;
+        if (!this.canMoveTo(pos)) {
+          return;
+        }
         break;
       case 'ShiftLeft':
       case 'ShiftRight':
@@ -300,7 +329,9 @@ function blockBoundingBox(x: number, y: number): BoundingBox {
 }
 
 function powerable(s: Sprite): boolean {
-  if (s.type === Sprites.Wall || s.type === Sprites.Text || s.type === Sprites.Empty) return false;
+  if (s.type === Sprites.Wall || s.type === Sprites.Text || s.type === Sprites.Empty) {
+    return false;
+  }
   return true;
 }
 

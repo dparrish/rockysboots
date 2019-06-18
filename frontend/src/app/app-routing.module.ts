@@ -5,7 +5,6 @@ import {EditorComponent} from './editor/editor.component';
 import {GameComponent} from './game/game.component';
 
 const routes: Routes = [
-  //{path: '', component: EditorComponent},
   {path: 'editor', component: EditorComponent},
   {path: '', component: GameComponent},
 ];

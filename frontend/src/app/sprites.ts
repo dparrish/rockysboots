@@ -53,7 +53,7 @@ export function DrawSprite(ctx: CanvasRenderingContext2D, sprite: Sprite) {
   if (sprite.type === Sprites.Wall) {
     powered = false;
   }
-  if (sprite.type === Sprites.Player || sprite.type == Sprites.Empty) {
+  if (sprite.type === Sprites.Player || sprite.type === Sprites.Empty) {
     powered = false;
   }
   if (powered) {
@@ -94,7 +94,7 @@ export function DrawSprite(ctx: CanvasRenderingContext2D, sprite: Sprite) {
 
       ctx.fillRect(x - h, y, h, 2);
       ctx.fillRect(x - h, y + blockSize, h, 2);
-      ctx.fillRect(x, y, 2, blockSize + 2)
+      ctx.fillRect(x, y, 2, blockSize + 2);
 
       ctx.beginPath();
       ctx.arc(x - h, y + h + 1, h, Math.PI * 0.5, Math.PI * 1.5);
@@ -147,13 +147,13 @@ export function DrawSprite(ctx: CanvasRenderingContext2D, sprite: Sprite) {
       // Draw ellipse arc.
       ctx.beginPath();
       let first = true;
-      let cX = x + 5;
-      let cY = y + h + 1;
-      let radX = h + 3;
-      let radY = blockSize;
+      const cX = x + 5;
+      const cY = y + h + 1;
+      const radX = h + 3;
+      const radY = blockSize;
       for (let i = 0.5 * Math.PI; i < 1.5 * Math.PI; i += 0.01) {
-        let xPos = cX - (radX * Math.sin(i)) * Math.sin(0 * Math.PI) + (radY * Math.cos(i)) * Math.cos(0 * Math.PI);
-        let yPos = cY + (radY * Math.cos(i)) * Math.sin(0 * Math.PI) + (radX * Math.sin(i)) * Math.cos(0 * Math.PI);
+        const xPos = cX - (radX * Math.sin(i)) * Math.sin(0 * Math.PI) + (radY * Math.cos(i)) * Math.cos(0 * Math.PI);
+        const yPos = cY + (radY * Math.cos(i)) * Math.sin(0 * Math.PI) + (radX * Math.sin(i)) * Math.cos(0 * Math.PI);
         if (first) {
           ctx.moveTo(xPos, yPos);
           first = false;

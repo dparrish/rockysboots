@@ -52,7 +52,9 @@ export class EventLoop {
     const now = moment().valueOf();
     while (this.timeQueue.length) {
       const event = this.timeQueue[0];
-      if (event.when.time > now) break;
+      if (event.when.time > now) {
+        break;
+      }
       this.timeQueue.shift();
       event.eventLoop = this;
       promises.push(event.callback(event));
@@ -65,7 +67,9 @@ export class EventLoop {
     const promises: Promise<any>[] = [];
     while (this.tickQueue.length) {
       const event = this.tickQueue[0];
-      if (event.when.tick > tick) break;
+      if (event.when.tick > tick) {
+        break;
+      }
       this.tickQueue.shift();
       event.eventLoop = this;
       promises.push(event.callback(event));
@@ -86,7 +90,11 @@ export class EventLoop {
 }
 
 function cmp(a: number, b: number): number {
-  if (a < b) return -1;
-  if (a > b) return 1;
+  if (a < b) {
+    return -1;
+  }
+  if (a > b) {
+    return 1;
+  }
   return 0;
 }

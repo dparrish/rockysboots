@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {AfterViewInit, Component} from '@angular/core';
 import * as _ from 'lodash';
 
 import {environment} from '../../environments/environment';
@@ -14,7 +14,7 @@ const directions = ['up', 'down', 'left', 'right'];
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.css'],
 })
-export class EditorComponent {
+export class EditorComponent implements AfterViewInit {
   canvas: HTMLCanvasElement;
   canvasWidth = constants.sizeX * constants.blockSize;
   canvasHeight = constants.sizeY * constants.blockSize;
@@ -25,11 +25,11 @@ export class EditorComponent {
     down: false,
   };
   currentSprite: Sprites = Sprites.Empty;
-  currentColour: string = 'white';
-  currentText: string = 'Text here';
-  currentFixed: boolean = false;
-  currentPowered: boolean = false;
-  moveSnap: boolean = true;
+  currentColour = 'white';
+  currentText = 'Text here';
+  currentFixed = false;
+  currentPowered = false;
+  moveSnap = true;
   mapList: string[] = [];
   Sprites: any;
   spriteNames: string[] = [];
@@ -43,7 +43,9 @@ export class EditorComponent {
   ngAfterViewInit() {
     setTimeout(() => {
       window.addEventListener('selectstart', event => {
-        if ((event.target as HTMLInputElement).type == 'text') return;
+        if ((event.target as HTMLInputElement).type === 'text') {
+          return;
+        }
         event.preventDefault();
       });
 
@@ -66,8 +68,12 @@ export class EditorComponent {
       this.loadMapList().then(loaded => {
         this.loadMap('empty');
       });
-      setInterval(() => {this.drawMap()}, 1000 / 30);
-      window.setInterval(() => {this.gameTick()}, 1000 / 2);
+      setInterval(() => {
+        this.drawMap();
+      }, 1000 / 30);
+      window.setInterval(() => {
+        this.gameTick();
+      }, 1000 / 2);
     }, 1);
   }
 
@@ -121,8 +127,12 @@ export class EditorComponent {
 
   snapPointer() {
     const ss = this.moveSnap ? constants.blockSize : snapSize;
-    if (this.pointer.x % constants.blockSize !== 0) this.pointer.x = Math.floor(this.pointer.x / ss) * ss;
-    if (this.pointer.y % constants.blockSize !== 0) this.pointer.y = Math.floor(this.pointer.y / ss) * ss;
+    if (this.pointer.x % constants.blockSize !== 0) {
+      this.pointer.x = Math.floor(this.pointer.x / ss) * ss;
+    }
+    if (this.pointer.y % constants.blockSize !== 0) {
+      this.pointer.y = Math.floor(this.pointer.y / ss) * ss;
+    }
   }
 
   selectColour(colour: string) {
@@ -248,24 +258,24 @@ export class EditorComponent {
 
   getWall(direction: string): Sprite[] {
     function isWall(s: Sprite): boolean {
-      return s.type == Sprites.Wall || s.type == Sprites.OptionWall;
+      return s.type === Sprites.Wall || s.type === Sprites.OptionWall;
     }
     switch (direction) {
       case 'up':
-        return _.filter(this.map.sprites, s => s.y == 0 && isWall(s));
+        return _.filter(this.map.sprites, s => s.y === 0 && isWall(s));
       case 'down':
-        return _.filter(this.map.sprites, s => s.y == (constants.sizeY - 1) * constants.blockSize && isWall(s));
+        return _.filter(this.map.sprites, s => s.y === (constants.sizeY - 1) * constants.blockSize && isWall(s));
       case 'left':
-        return _.filter(this.map.sprites, s => s.x == 0 && isWall(s));
+        return _.filter(this.map.sprites, s => s.x === 0 && isWall(s));
       case 'right':
-        return _.filter(this.map.sprites, s => s.x == (constants.sizeX - 1) * constants.blockSize && isWall(s));
+        return _.filter(this.map.sprites, s => s.x === (constants.sizeX - 1) * constants.blockSize && isWall(s));
       default:
         return null;
     }
   }
 
   buildWall(direction: string): Sprite[] {
-    let sprites: Sprite[] = [];
+    const sprites: Sprite[] = [];
     switch (direction) {
       case 'up':
         for (let i = 0; i < constants.sizeX; i++) {
@@ -314,24 +324,26 @@ export class EditorComponent {
   }
 
   validExits(): Promise<any> {
-    if (this.map.name == 'sprite-test') return Promise.resolve(true);
+    if (this.map.name === 'sprite-test') {
+      return Promise.resolve(true);
+    }
     let wall = this.getWall('up');
-    if (wall.length != constants.sizeX && !this.map.exits.up) {
+    if (wall.length !== constants.sizeX && !this.map.exits.up) {
       console.log(wall);
       return Promise.reject('exit-up invalid');
     }
     wall = this.getWall('down');
-    if (wall.length != constants.sizeX && !this.map.exits.down) {
+    if (wall.length !== constants.sizeX && !this.map.exits.down) {
       console.log(wall);
       return Promise.reject('exit-down invalid');
     }
     wall = this.getWall('left');
-    if (wall.length != constants.sizeY && !this.map.exits.left) {
+    if (wall.length !== constants.sizeY && !this.map.exits.left) {
       console.log(wall);
       return Promise.reject('exit-left invalid');
     }
     wall = this.getWall('right');
-    if (wall.length != constants.sizeY && !this.map.exits.right) {
+    if (wall.length !== constants.sizeY && !this.map.exits.right) {
       console.log(wall);
       return Promise.reject('exit-right invalid');
     }

@@ -6,4 +6,5 @@ export const constants = {
   sizeX: 20,
   sizeY: 12,
   inEditor: true,
-}
+};
+
