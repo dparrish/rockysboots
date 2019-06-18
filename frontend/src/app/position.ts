@@ -8,6 +8,10 @@ export class Point {
       return new Point(this.x + pos as number, this.y + y);
     }
   }
+
+  toString(): string {
+    return `${this.x},${this.y}`;
+  }
 }
 
 export class BoundingBox {
@@ -21,5 +25,9 @@ export class BoundingBox {
     return (
         (Math.abs(this.topleft.x - other.topleft.x) * 2 < this.width + other.width) &&
         (Math.abs(this.topleft.y - other.topleft.y) * 2 < this.height + other.height));
+  }
+
+  toString(): string {
+    return `${this.topleft} - ${this.bottomright}`;
   }
 }

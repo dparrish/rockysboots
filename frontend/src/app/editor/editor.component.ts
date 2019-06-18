@@ -4,6 +4,7 @@ import * as _ from 'lodash';
 import {environment} from '../../environments/environment';
 import {constants} from '../constants/constants.module';
 import {GameMap, loadMap} from '../game-map';
+import {Point} from '../position';
 import {newSprite, Player, Sprite, Sprites} from '../sprites';
 
 const snapSize = 10;
@@ -150,8 +151,8 @@ export class EditorComponent implements AfterViewInit {
     if (this.currentSprite === Sprites.Player) {
       this.map.playerStart.x = this.pointer.x;
       this.map.playerStart.y = this.pointer.y;
-      this.playerSprite.x = this.pointer.x;
-      this.playerSprite.y = this.pointer.y;
+      this.playerSprite.pos.x = this.pointer.x;
+      this.playerSprite.pos.y = this.pointer.y;
       return;
     }
     _.remove(this.map.sprites, (el) => el.x === this.pointer.x && el.y === this.pointer.y);
@@ -188,8 +189,8 @@ export class EditorComponent implements AfterViewInit {
     this.pointer.y = event.offsetY;
     this.snapPointer();
     if (this.tempSprite) {
-      this.tempSprite.x = this.pointer.x;
-      this.tempSprite.y = this.pointer.y;
+      this.tempSprite.pos.x = this.pointer.x;
+      this.tempSprite.pos.y = this.pointer.y;
     }
   }
 
@@ -396,8 +397,7 @@ export class EditorComponent implements AfterViewInit {
               for (const s of wall) {
                 newMap.sprites.push({
                   type: Sprites.Wall,
-                  x: s.x,
-                  y: (constants.sizeY - 1) * constants.blockSize,
+                  pos: new Point(s.pos.x, (constants.sizeY - 1) * constants.blockSize),
                 });
               }
               // console.log(`Creating map ${map.exits.up} up`, newMap);
@@ -418,8 +418,7 @@ export class EditorComponent implements AfterViewInit {
               for (const s of wall) {
                 newMap.sprites.push({
                   type: Sprites.Wall,
-                  x: s.x,
-                  y: 0,
+                  pos: new Point(s.pos.x, 0),
                 });
               }
               // console.log(`Creating map ${map.exits.down} down`, newMap);
@@ -440,8 +439,7 @@ export class EditorComponent implements AfterViewInit {
               for (const s of wall) {
                 newMap.sprites.push({
                   type: Sprites.Wall,
-                  x: (constants.sizeX - 1) * constants.blockSize,
-                  y: s.y,
+                  pos: new Point((constants.sizeX - 1) * constants.blockSize, s.pos.y),
                 });
               }
               // console.log(`Creating map ${map.exits.left} left`, newMap);
@@ -462,8 +460,7 @@ export class EditorComponent implements AfterViewInit {
               for (const s of wall) {
                 newMap.sprites.push({
                   type: Sprites.Wall,
-                  x: 0,
-                  y: s.y,
+                  pos: new Point(0, s.pos.y),
                 });
               }
               // console.log(`Creating map ${map.exits.right} right`, newMap);

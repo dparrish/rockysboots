@@ -196,32 +196,41 @@ export class GameComponent implements AfterViewInit {
     return _.filter(_.filter(this.map.sprites, (s) => s.y === pos.y && s.x === pos.x), s => s.powerable);
   }
 
-  canMoveTo(pos: Point): boolean {
+  canMoveTo(player: Player): boolean {
     return !_.find(this.map.sprites, s => {
+      // Find all impassable sprites that intersect with the player's new position.
       if (s.passable) return false;
-      return s.boundingbox.intersects(blockBoundingBox(pos.x, pos.y));
+      if (s.boundingbox.intersects(player.boundingbox)) {
+        console.log(`player intersects with ${s} bounding box at ${s.boundingbox}`);
+      }
+      return s.boundingbox.intersects(player.boundingbox);
     });
   }
 
   async keyDown(event) {
     const distance = this.modifiers.shift ? 10 : constants.blockSize;
-    const pos = this.player.pos;
+    const newPlayer = new Player().fromJson(this.player.toJson());
     switch (event.code) {
       case 'ArrowUp':
-        pos.y -= distance;
-        if (!this.canMoveTo(pos)) return;
+        newPlayer.pos.y -= distance;
+        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
+        console.log(`Player bounding box is at ${newPlayer.boundingbox}`);
+        if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ArrowDown':
-        pos.y += distance;
-        if (!this.canMoveTo(pos)) return;
+        newPlayer.pos.y += distance;
+        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
+        if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ArrowLeft':
-        pos.x -= distance;
-        if (!this.canMoveTo(pos)) return;
+        newPlayer.pos.x -= distance;
+        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
+        if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ArrowRight':
-        pos.x += distance;
-        if (!this.canMoveTo(pos)) return;
+        newPlayer.pos.x += distance;
+        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
+        if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ShiftLeft':
       case 'ShiftRight':
@@ -236,35 +245,35 @@ export class GameComponent implements AfterViewInit {
     }
 
     // Valid movement.
-    this.player.x = pos.x;
-    this.player.y = pos.y;
+    this.player.pos.x = newPlayer.pos.x;
+    this.player.pos.y = newPlayer.pos.y;
 
-    if (this.map.exits.right && this.player.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
+    if (this.map.exits.right && this.player.pos.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
       // Moved to the right.
       return this.loadMap(this.map.exits.right).then((map) => {
-        this.player.x = 0;
-        this.player.y = pos.y;
+        this.player.pos.x = 0;
+        this.player.pos.y = newPlayer.pos.y;
       });
     }
-    if (this.map.exits.left && this.player.x < 0) {
+    if (this.map.exits.left && this.player.pos.x < 0) {
       // Moved to the left.
       return this.loadMap(this.map.exits.left).then((map) => {
-        this.player.x = (constants.sizeX - 1) * constants.blockSize;
-        this.player.y = pos.y;
+        this.player.pos.x = (constants.sizeX - 1) * constants.blockSize;
+        this.player.pos.y = newPlayer.pos.y;
       });
     }
-    if (this.map.exits.up && this.player.y < 0) {
+    if (this.map.exits.up && this.player.pos.y < 0) {
       // Moved to the top.
       return this.loadMap(this.map.exits.up).then((map) => {
-        this.player.x = pos.x;
-        this.player.y = (constants.sizeY - 1) * constants.blockSize;
+        this.player.pos.x = newPlayer.pos.x;
+        this.player.pos.y = (constants.sizeY - 1) * constants.blockSize;
       });
     }
-    if (this.map.exits.down && this.player.y + constants.blockSize - 1 >= constants.sizeY * constants.blockSize) {
+    if (this.map.exits.down && this.player.pos.y + constants.blockSize - 1 >= constants.sizeY * constants.blockSize) {
       // Moved to the bottom.
       return this.loadMap(this.map.exits.down).then((map) => {
-        this.player.x = pos.x;
-        this.player.y = 0;
+        this.player.pos.x = newPlayer.pos.x;
+        this.player.pos.y = 0;
       });
     }
 

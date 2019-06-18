@@ -1,5 +1,7 @@
 import * as _ from 'lodash';
 
+import {environment} from '../environments/environment';
+
 import {constants} from './constants/constants.module';
 import * as sprites from './sprites';
 
@@ -38,7 +40,7 @@ export class GameMap {
 }
 
 export function loadMap(name: string): Promise<GameMap> {
-  return fetch(`https://rockysboots.dparrish.com/api/v1/map/${name}`, {
+  return fetch(`${environment.mapserverUrl}/map/${name}`, {
            cache: 'no-cache',
            headers: {'Content-Type': 'application/json'},
            redirect: 'follow',

@@ -9,16 +9,16 @@ export const constants = {
 
   formatText: (text: string): string => {
     for (const rep in textReplacements) {
-      text = text.replace(`{${rep}}`, textReplacements[rep]);
+      if (textReplacements.hasOwnProperty(rep)) text = text.replace(`{${rep}}`, textReplacements[rep]);
     }
     return text;
   }
 };
 
 const textReplacements = {
-  'Up': '\x8b',
-  'Down': '\x8a',
-  'Left': '\x88',
-  'Right': '\x95',
+  Up: '\x8b',
+  Down: '\x8a',
+  Left: '\x88',
+  Right: '\x95',
 };
 
