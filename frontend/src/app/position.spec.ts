@@ -21,6 +21,20 @@ describe('Point', () => {
     expect(p.x).toEqual(20);
     expect(p.y).toEqual(30);
   });
+
+  it('should subtract a point', () => {
+    let p = new Point(30, 35);
+    p = p.sub(new Point(10, 20));
+    expect(p.x).toEqual(20);
+    expect(p.y).toEqual(15);
+  });
+
+  it('should subtract x and y', () => {
+    let p = new Point(30, 35);
+    p = p.sub(10, 20);
+    expect(p.x).toEqual(20);
+    expect(p.y).toEqual(15);
+  });
 });
 
 describe('BoundingBox', () => {
@@ -33,7 +47,6 @@ describe('BoundingBox', () => {
     // Check near top-left.
     const a = new BoundingBox(new Point(100, 100), 120, 40);
     const b = new BoundingBox(new Point(110, 110), 40, 40);
-    console.log(`Checking intersecting bounding boxes ${a} and ${b}`);
     expect(a.intersects(b)).toBeTruthy();
   });
 
@@ -41,7 +54,6 @@ describe('BoundingBox', () => {
     // Check near bottom-right.
     const a = new BoundingBox(new Point(100, 100), 120, 40);
     const b = new BoundingBox(new Point(180, 100), 40, 40);
-    console.log(`Checking intersecting bounding boxes ${a} and ${b}`);
     expect(a.intersects(b)).toBeTruthy();
   });
 

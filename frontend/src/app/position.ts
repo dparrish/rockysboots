@@ -9,6 +9,14 @@ export class Point {
     }
   }
 
+  sub(pos: Point|number, y?: number) {
+    if (pos instanceof Point) {
+      return new Point(this.x - pos.x, this.y - pos.y);
+    } else {
+      return new Point(this.x - pos as number, this.y - y);
+    }
+  }
+
   toString(): string {
     return `${this.x},${this.y}`;
   }

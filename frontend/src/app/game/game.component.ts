@@ -23,6 +23,8 @@ export class GameComponent implements AfterViewInit {
     control: false,
     alt: false,
   };
+  carrying: Sprite = null;
+  carryDiff: Point = null;
 
   constructor(private eventLoop: EventLoop) {}
 
@@ -210,26 +212,26 @@ export class GameComponent implements AfterViewInit {
   async keyDown(event) {
     const distance = this.modifiers.shift ? 10 : constants.blockSize;
     const newPlayer = new Player().fromJson(this.player.toJson());
+    let move: Point = null;
     switch (event.code) {
       case 'ArrowUp':
-        newPlayer.pos.y -= distance;
-        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
-        console.log(`Player bounding box is at ${newPlayer.boundingbox}`);
+        move = new Point(0, -distance);
+        newPlayer.pos = newPlayer.pos.add(move);
         if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ArrowDown':
-        newPlayer.pos.y += distance;
-        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
+        move = new Point(0, distance);
+        newPlayer.pos = newPlayer.pos.add(move);
         if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ArrowLeft':
-        newPlayer.pos.x -= distance;
-        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
+        move = new Point(-distance, 0);
+        newPlayer.pos = newPlayer.pos.add(move);
         if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ArrowRight':
-        newPlayer.pos.x += distance;
-        console.log(`Player attempting to move from ${this.player.pos} to ${newPlayer.pos}`);
+        move = new Point(distance, 0);
+        newPlayer.pos = newPlayer.pos.add(move);
         if (!this.canMoveTo(newPlayer)) return;
         break;
       case 'ShiftLeft':
@@ -245,35 +247,51 @@ export class GameComponent implements AfterViewInit {
     }
 
     // Valid movement.
-    this.player.pos.x = newPlayer.pos.x;
-    this.player.pos.y = newPlayer.pos.y;
+    if (move) {
+      this.player.pos = this.player.pos.add(move);
+      if (this.carrying) this.carrying.pos = this.carrying.pos.add(move);
+    }
+
+    const moveSpriteToMap = (sprite: Sprite, from: GameMap, to: GameMap, pos: Point) => {
+      _.remove(from.sprites, s => s === sprite);
+      to.sprites.push(sprite);
+      sprite.pos = pos;
+    };
 
     if (this.map.exits.right && this.player.pos.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
       // Moved to the right.
+      const oldMap = this.map;
       return this.loadMap(this.map.exits.right).then((map) => {
         this.player.pos.x = 0;
         this.player.pos.y = newPlayer.pos.y;
+        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
       });
     }
     if (this.map.exits.left && this.player.pos.x < 0) {
       // Moved to the left.
+      const oldMap = this.map;
       return this.loadMap(this.map.exits.left).then((map) => {
         this.player.pos.x = (constants.sizeX - 1) * constants.blockSize;
         this.player.pos.y = newPlayer.pos.y;
+        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
       });
     }
     if (this.map.exits.up && this.player.pos.y < 0) {
       // Moved to the top.
+      const oldMap = this.map;
       return this.loadMap(this.map.exits.up).then((map) => {
         this.player.pos.x = newPlayer.pos.x;
         this.player.pos.y = (constants.sizeY - 1) * constants.blockSize;
+        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
       });
     }
     if (this.map.exits.down && this.player.pos.y + constants.blockSize - 1 >= constants.sizeY * constants.blockSize) {
       // Moved to the bottom.
+      const oldMap = this.map;
       return this.loadMap(this.map.exits.down).then((map) => {
         this.player.pos.x = newPlayer.pos.x;
         this.player.pos.y = 0;
+        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
       });
     }
 
@@ -292,7 +310,18 @@ export class GameComponent implements AfterViewInit {
     }
   }
 
-  handlePickup() {}
+  handlePickup() {
+    if (this.carrying) {
+      // Drop sprite.
+      this.carrying = null;
+    } else {
+      // Pick up sprite.
+      for (const s of _.filter(this.map.sprites, s => !s.fixed && s.boundingbox.intersects(this.player.boundingbox))) {
+        this.carrying = s;
+        this.carryDiff = this.player.pos.sub(s.pos);
+      }
+    }
+  }
 
   mouseLeave(event) {}
 
@@ -303,8 +332,4 @@ export class GameComponent implements AfterViewInit {
   pointerDown(event) {}
 
   mouseMove(event) {}
-}
-
-function blockBoundingBox(x: number, y: number): BoundingBox {
-  return new BoundingBox(new Point(x, y), constants.blockSize - 1, constants.blockSize - 1);
 }

@@ -1,5 +1,6 @@
 import {constants} from './constants/constants.module';
 import {BoundingBox, Point} from './position';
+import * as sprites from './sprites';
 
 const playerSprite = new Image();
 playerSprite.src = '../assets/player.png';
@@ -125,42 +126,9 @@ export class Sprite {
 
 export function newSprite(src: Sprites|object): Sprite {
   if ((src as any).type) {
-    return newSprite((src as any).type).fromJson(src as object);
+    return new (sprites as any)[Sprites[(src as any).type]](src);
   }
-  console.log(`Creating new ${src}`);
-  switch (src) {
-    case Sprites.AndGate:
-      return new AndGate();
-    case Sprites.Boot:
-      return new Boot();
-    case Sprites.ClackerDown:
-      return new ClackerDown();
-    case Sprites.ClackerUp:
-      return new ClackerUp();
-    case Sprites.ConnectorDown:
-      return new ConnectorDown();
-    case Sprites.ConnectorLeft:
-      return new ConnectorLeft();
-    case Sprites.ConnectorRight:
-      return new ConnectorRight();
-    case Sprites.ConnectorUp:
-      return new ConnectorUp();
-    case Sprites.NotGate:
-      return new NotGate();
-    case Sprites.OptionWall:
-      return new OptionWall();
-    case Sprites.OrGate:
-      return new OrGate();
-    case Sprites.Player:
-      return new Player();
-    case Sprites.Text:
-      return new Text();
-    case Sprites.Wall:
-      return new Wall();
-    default:
-      console.log(`Invalid sprite type ${src}`);
-      return new Empty();
-  }
+  return new (sprites as any)[Sprites[src as Sprites]]();
 }
 
 export class Empty extends Sprite {
@@ -323,7 +291,6 @@ export class NotGate extends Sprite {
     this.powerable = true;
     this.inputs = [new Point(20, blockSize / 2)];
     this.outputs = [new Point(-60, 20)];
-    this.passable = false;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -355,7 +322,7 @@ export class NotGate extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x - blockSize * 2 + 1, this.pos.y), blockSize * 3, blockSize);
+    return new BoundingBox(new Point(this.pos.x - blockSize * 2, this.pos.y), blockSize * 3, blockSize);
   }
 }
 

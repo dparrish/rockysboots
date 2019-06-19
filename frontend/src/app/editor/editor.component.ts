@@ -349,11 +349,24 @@ export class EditorComponent implements AfterViewInit {
     return Promise.resolve(true);
   }
 
+  buildJson(map: GameMap): any {
+    const json = {
+      name: map.name,
+      playerStart: map.playerStart,
+      exits: map.exits,
+      sprites: [],
+    };
+    for (const sprite of map.sprites) {
+      json.sprites.push(sprite.toJson());
+    }
+    return json;
+  }
+
   async saveMap(map: GameMap, forceInvalidExits = false): Promise<any> {
     if (map.name === '') {
       throw new Error('Invalid map name');
     }
-    this.currentJson = JSON.stringify(map, null, 2);
+    this.currentJson = JSON.stringify(this.buildJson(map), null, 2);
 
     try {
       if (!forceInvalidExits) {
@@ -370,7 +383,7 @@ export class EditorComponent implements AfterViewInit {
              cache: 'no-cache',
              headers: {'Content-Type': 'application/json'},
              redirect: 'follow',
-             body: JSON.stringify(map, null, 2),
+             body: JSON.stringify(this.buildJson(map)),
            })
         .then((response: Response) => {
           return response.json();

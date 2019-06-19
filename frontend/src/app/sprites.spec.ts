@@ -20,4 +20,9 @@ describe('Sprites', () => {
     expect(s.boundingbox.bottomright.x).toEqual(50);
     expect(s.boundingbox.bottomright.y).toEqual(60);
   });
+
+  it('should force text to be fixed', () => {
+    const s = newSprite({type: Sprites.Text, x: 10, y: 20, fixed: false});
+    expect(s.fixed).toEqual(true);
+  });
 });
