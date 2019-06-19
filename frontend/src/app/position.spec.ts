@@ -68,4 +68,32 @@ describe('BoundingBox', () => {
     const b = new BoundingBox(new Point(1000, 1000), 40, 40);
     expect(a.intersects(b)).toBeFalsy();
   });
+
+  it('should add a position', () => {
+    const a = new BoundingBox(new Point(100, 100), 120, 40);
+    const b = a.add(new Point(10, 20));
+    expect(b.topleft.x).toEqual(100 + 10);
+    expect(b.topleft.y).toEqual(100 + 20);
+    expect(b.bottomright.x).toEqual(100 + 120 + 10);
+    expect(b.bottomright.y).toEqual(100 + 40 + 20);
+  });
+
+  it('should relativeTo', () => {
+    const a = new BoundingBox(new Point(100, 100), 120, 40);
+    const b = new BoundingBox(new Point(10, 20), 10, 10);
+    const c = a.relativeTo(b);
+    // Hasn't resized.
+    expect(c.width).toEqual(120);
+    expect(c.height).toEqual(40);
+    // Output is moved.
+    expect(c.topleft.x).toEqual(100 + 10);
+    expect(c.topleft.y).toEqual(100 + 20);
+    expect(c.bottomright.x).toEqual(100 + 120 + 10);
+    expect(c.bottomright.y).toEqual(100 + 40 + 20);
+    // Original hasn't resized or moved.
+    expect(a.topleft.x).toEqual(100);
+    expect(a.topleft.y).toEqual(100);
+    expect(a.bottomright.x).toEqual(100 + 120);
+    expect(a.bottomright.y).toEqual(100 + 40);
+  });
 });

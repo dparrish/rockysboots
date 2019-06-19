@@ -11,6 +11,10 @@ bootSprite.src = '../assets/boot.png';
 
 const blockSize = constants.blockSize;
 
+function boundingbox(x: number, y: number, width: number, height: number): BoundingBox {
+  return new BoundingBox(new Point(x, y), width, height);
+}
+
 export enum Sprites {
   Empty,
   Player,
@@ -41,8 +45,11 @@ export class Sprite {
   powerSpread: number;
   powerable: boolean = false;
   powered: boolean = false;
-  inputs: Point[] = [];
-  outputs: Point[] = [];
+
+  // Bounding box for each input, relative to the bounding box of the sprite.
+  inputs: BoundingBox[] = [];
+  // Bounding box for each output, relative to the bounding box of the sprite.
+  outputs: BoundingBox[] = [];
 
   jsonFields = ['type', 'text', 'colour', 'powered', 'fixed'];
 
@@ -59,7 +66,7 @@ export class Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x, this.pos.y), blockSize, blockSize);
+    return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize);
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -73,34 +80,26 @@ export class Sprite {
   finishDraw(ctx: CanvasRenderingContext2D) {
     ctx.restore();
     if (constants.inEditor) {
-      // Draw circles around inputs.
-      for (const pos of this.inputs) {
-        ctx.save();
-        ctx.strokeStyle = 'blue';
-        ctx.beginPath();
-        ctx.arc(this.pos.x + pos.x, this.pos.y + pos.y, 10, 0, Math.PI * 2);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // Draw circles around outputs.
-      for (const pos of this.outputs) {
-        ctx.save();
-        ctx.strokeStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(this.pos.x + pos.x, this.pos.y + pos.y, 10, 0, Math.PI * 2);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.restore();
-      }
-
       // Draw bounding box.
       ctx.save();
       ctx.strokeStyle = 'darkgray';
       const bb = this.boundingbox;
       ctx.strokeRect(bb.topleft.x, bb.topleft.y, bb.width, bb.height);
       ctx.restore();
+
+      // Draw inputs.
+      for (const input of this.inputs) {
+        ctx.strokeStyle = 'blue';
+        ctx.lineWidth = 1;
+        input.relativeTo(this.boundingbox).draw(ctx);
+      }
+
+      // Draw outputs.
+      for (const output of this.outputs) {
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 1;
+        output.relativeTo(this.boundingbox).draw(ctx);
+      }
     }
   }
 
@@ -125,9 +124,10 @@ export class Sprite {
 }
 
 export function newSprite(src: Sprites|object): Sprite {
-  if ((src as any).type) {
+  if ((src as any).type !== undefined) {
     return new (sprites as any)[Sprites[(src as any).type]](src);
   }
+  console.log(`Creating new sprite ${Sprites[src as Sprites]} from`, src);
   return new (sprites as any)[Sprites[src as Sprites]]();
 }
 
@@ -149,6 +149,9 @@ export class Player extends Sprite {
   constructor(json?: any) {
     super(json);
     this.type = Sprites.Player;
+    this.outputs = [
+      boundingbox(0, 0, 40, 40),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -164,6 +167,7 @@ export class Wall extends Sprite {
     this.type = Sprites.Wall;
     this.passable = false;
     this.fixed = true;
+    this.powered = false;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -180,7 +184,9 @@ export class OptionWall extends Sprite {
     this.powerable = true;
     this.passable = false;
     this.fixed = true;
-    this.inputs = [new Point(20, 20)];
+    this.inputs = [
+      boundingbox(0, 0, 40, 40),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -220,7 +226,7 @@ export class Text extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x, this.pos.y), blockSize * 0.46 * this.text.length, blockSize / 2);
+    return boundingbox(this.pos.x, this.pos.y, blockSize * 0.46 * this.text.length, blockSize / 2);
   }
 }
 
@@ -228,7 +234,9 @@ export class Boot extends Sprite {
   constructor(json?: any) {
     super(json);
     this.type = Sprites.Boot;
-    this.inputs = [new Point(20, 20)];
+    this.inputs = [
+      boundingbox(0, 0, 40, 40),
+    ];
     this.powerable = true;
   }
 
@@ -245,10 +253,12 @@ export class AndGate extends Sprite {
     this.type = Sprites.AndGate;
     this.powerable = true;
     this.inputs = [
-      new Point(20, 10),
-      new Point(20, 30),
+      boundingbox(2 * blockSize + 11, 1, 18, 18),
+      boundingbox(2 * blockSize + 11, 21, 18, 18),
     ];
-    this.outputs = [new Point(-60, 20)];
+    this.outputs = [
+      boundingbox(10, 11, 18, 18),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -280,7 +290,7 @@ export class AndGate extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x - blockSize * 2, this.pos.y), blockSize * 3, blockSize);
+    return boundingbox(this.pos.x - blockSize * 2, this.pos.y, blockSize * 3, blockSize);
   }
 }
 
@@ -289,8 +299,12 @@ export class NotGate extends Sprite {
     super(json);
     this.type = Sprites.NotGate;
     this.powerable = true;
-    this.inputs = [new Point(20, blockSize / 2)];
-    this.outputs = [new Point(-60, 20)];
+    this.inputs = [
+      boundingbox(2 * blockSize + 11, 11, 18, 18),
+    ];
+    this.outputs = [
+      boundingbox(10, 11, 18, 18),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -322,7 +336,7 @@ export class NotGate extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x - blockSize * 2, this.pos.y), blockSize * 3, blockSize);
+    return boundingbox(this.pos.x - blockSize * 2, this.pos.y, blockSize * 3, blockSize);
   }
 }
 
@@ -332,11 +346,12 @@ export class OrGate extends Sprite {
     this.type = Sprites.OrGate;
     this.powerable = true;
     this.inputs = [
-      new Point(20, 10),
-      new Point(20, 30),
+      boundingbox(2 * blockSize + 11, 1, 18, 18),
+      boundingbox(2 * blockSize + 11, 21, 18, 18),
     ];
-
-    this.outputs = [new Point(-60, 20)];
+    this.outputs = [
+      boundingbox(10, 11, 18, 18),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -383,7 +398,7 @@ export class OrGate extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x - blockSize * 2, this.pos.y), blockSize * 3, blockSize);
+    return boundingbox(this.pos.x - blockSize * 2, this.pos.y, blockSize * 3, blockSize);
   }
 }
 
@@ -392,6 +407,9 @@ export class ClackerUp extends Sprite {
     super(json);
     this.type = Sprites.ClackerUp;
     this.powerable = true;
+    this.inputs = [
+      boundingbox(0, 0, 40, 40),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -410,6 +428,9 @@ export class ClackerDown extends Sprite {
     super(json);
     this.type = Sprites.ClackerDown;
     this.powerable = true;
+    this.inputs = [
+      boundingbox(0, 0, 40, 40),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -428,8 +449,12 @@ export class ConnectorLeft extends Sprite {
     super(json);
     this.type = Sprites.ConnectorLeft;
     this.powerable = true;
-    this.inputs = [new Point(20, 20)];
-    this.outputs = [new Point(-20, 20)];
+    this.inputs = [
+      boundingbox(blockSize + 11, 11, 18, 18),
+    ];
+    this.outputs = [
+      boundingbox(10, 11, 18, 18),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -446,7 +471,7 @@ export class ConnectorLeft extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x - blockSize, this.pos.y), 2 * blockSize, blockSize);
+    return boundingbox(this.pos.x - blockSize, this.pos.y, 2 * blockSize, blockSize);
   }
 }
 
@@ -455,8 +480,12 @@ export class ConnectorRight extends Sprite {
     super(json);
     this.type = Sprites.ConnectorRight;
     this.powerable = true;
-    this.inputs = [new Point(20, 20)];
-    this.outputs = [new Point(60, 20)];
+    this.inputs = [
+      boundingbox(11, 11, 18, 18),
+    ];
+    this.outputs = [
+      boundingbox(blockSize + 10, 11, 18, 18),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -473,7 +502,7 @@ export class ConnectorRight extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x, this.pos.y), 2 * blockSize, blockSize);
+    return boundingbox(this.pos.x, this.pos.y, 2 * blockSize, blockSize);
   }
 }
 
@@ -482,8 +511,12 @@ export class ConnectorUp extends Sprite {
     super(json);
     this.type = Sprites.ConnectorUp;
     this.powerable = true;
-    this.inputs = [new Point(20, 20)];
-    this.outputs = [new Point(20, -20)];
+    this.inputs = [
+      boundingbox(11, blockSize + 11, 18, 18),
+    ];
+    this.outputs = [
+      boundingbox(11, 11, 18, 18),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -500,7 +533,7 @@ export class ConnectorUp extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x, this.pos.y - blockSize), blockSize, blockSize * 2);
+    return boundingbox(this.pos.x, this.pos.y - blockSize, blockSize, blockSize * 2);
   }
 }
 
@@ -509,8 +542,12 @@ export class ConnectorDown extends Sprite {
     super(json);
     this.type = Sprites.ConnectorDown;
     this.powerable = true;
-    this.inputs = [new Point(20, 20)];
-    this.outputs = [new Point(20, 60)];
+    this.inputs = [
+      boundingbox(11, 11, 18, 18),
+    ];
+    this.outputs = [
+      boundingbox(11, blockSize + 11, 18, 18),
+    ];
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -527,7 +564,7 @@ export class ConnectorDown extends Sprite {
   }
 
   get boundingbox(): BoundingBox {
-    return new BoundingBox(new Point(this.pos.x, this.pos.y), blockSize, blockSize * 2);
+    return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize * 2);
   }
 }
 

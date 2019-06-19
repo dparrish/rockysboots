@@ -132,8 +132,7 @@ export class EditorComponent implements AfterViewInit {
 
   selectColour(colour: string) {
     this.currentColour = colour;
-    document.querySelectorAll('div.colour').forEach((el) => {
-      const h = (el as HTMLElement);
+    document.querySelectorAll('div.colour').forEach((h: HTMLElement) => {
       if (h.style.backgroundColor === colour) {
         h.style.border = '2px solid black';
       } else {
@@ -144,8 +143,8 @@ export class EditorComponent implements AfterViewInit {
 
   dropSprite() {
     if (this.currentSprite === Sprites.Empty) {
-      // console.log(`Removing all sprites at at ${this.pointer.x} / ${this.pointer.y}`);
-      _.remove(this.map.sprites, (el) => el.x === this.pointer.x && el.y === this.pointer.y);
+      console.log(`Removing all sprites at at ${this.pointer.x} / ${this.pointer.y}`);
+      _.remove(this.map.sprites, (el: Sprite) => el.pos.x === this.pointer.x && el.pos.y === this.pointer.y);
       return;
     }
     if (this.currentSprite === Sprites.Player) {
@@ -155,7 +154,7 @@ export class EditorComponent implements AfterViewInit {
       this.playerSprite.pos.y = this.pointer.y;
       return;
     }
-    _.remove(this.map.sprites, (el) => el.x === this.pointer.x && el.y === this.pointer.y);
+    _.remove(this.map.sprites, (el: Sprite) => el.pos.x === this.pointer.x && el.pos.y === this.pointer.y);
     this.map.sprites.push(this.tempSprite);
     this.map.sortSprites();
     this.tempSprite = null;
@@ -239,7 +238,7 @@ export class EditorComponent implements AfterViewInit {
   }
 
   loadMap(name: string): Promise<any> {
-    return loadMap(name).then(map => {
+    return loadMap(name).then((map: GameMap) => {
       this.map = map;
       this.map.sprites = _.map(map.sprites, newSprite);
       this.playerSprite = new Player({
@@ -261,13 +260,15 @@ export class EditorComponent implements AfterViewInit {
     }
     switch (direction) {
       case 'up':
-        return _.filter(this.map.sprites, (s) => s.y === 0 && isWall(s));
+        return _.filter(this.map.sprites, (s: Sprite) => s.pos.y === 0 && isWall(s));
       case 'down':
-        return _.filter(this.map.sprites, (s) => s.y === (constants.sizeY - 1) * constants.blockSize && isWall(s));
+        return _.filter(
+            this.map.sprites, (s: Sprite) => s.pos.y === (constants.sizeY - 1) * constants.blockSize && isWall(s));
       case 'left':
-        return _.filter(this.map.sprites, (s) => s.x === 0 && isWall(s));
+        return _.filter(this.map.sprites, (s: Sprite) => s.pos.x === 0 && isWall(s));
       case 'right':
-        return _.filter(this.map.sprites, (s) => s.x === (constants.sizeX - 1) * constants.blockSize && isWall(s));
+        return _.filter(
+            this.map.sprites, (s: Sprite) => s.pos.x === (constants.sizeX - 1) * constants.blockSize && isWall(s));
       default:
         return null;
     }

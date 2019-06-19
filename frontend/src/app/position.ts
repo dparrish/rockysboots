@@ -29,6 +29,14 @@ export class BoundingBox {
     return new Point(this.topleft.x + this.width, this.topleft.y + this.height);
   }
 
+  add(distance: Point): BoundingBox {
+    return new BoundingBox(this.topleft.add(distance), this.width, this.height);
+  }
+
+  relativeTo(box: BoundingBox): BoundingBox {
+    return new BoundingBox(this.topleft.add(box.topleft), this.width, this.height);
+  }
+
   intersects(other: BoundingBox): boolean {
     return (
         this.topleft.x < other.topleft.x + other.width && this.topleft.x + this.width > other.topleft.x &&
@@ -37,5 +45,11 @@ export class BoundingBox {
 
   toString(): string {
     return `${this.topleft} - ${this.bottomright}`;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.strokeRect(this.topleft.x, this.topleft.y, this.width, this.height);
+    ctx.restore();
   }
 }
