@@ -38,6 +38,7 @@ export class EditorComponent implements AfterViewInit {
   drawGrid: boolean = false;
   playerSprite: Player = null;
   tempSprite: Sprite = null;
+  tickCount: number = 0;
 
   constructor() {
     constants.inEditor = true;
@@ -74,12 +75,10 @@ export class EditorComponent implements AfterViewInit {
 
       await this.loadMapList();
       await this.loadMap('sprite-test');
-      window.setInterval(() => {
-        this.drawMap();
-      }, 1000 / 30);
+      this.drawMap();
       window.setInterval(() => {
         this.gameTick();
-      }, 1000 / 2);
+      }, 1000 / 4);
     }, 1);
   }
 
@@ -252,7 +251,14 @@ export class EditorComponent implements AfterViewInit {
 
   updateExitsTicks() {}
 
-  gameTick() {}
+  gameTick() {
+    this.tickCount++;
+    // Update all sprites' internal state.
+    for (const s of this.map.sprites) {
+      s.tick(this.tickCount);
+    }
+    this.drawMap();
+  }
 
   getWall(direction: string): Sprite[] {
     function isWall(s: Sprite): boolean {

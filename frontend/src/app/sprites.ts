@@ -10,6 +10,7 @@ const bootSprite = new Image();
 bootSprite.src = '../assets/boot.png';
 
 const blockSize = constants.blockSize;
+const h = blockSize / 2;
 
 function boundingbox(x: number, y: number, width: number, height: number): BoundingBox {
   return new BoundingBox(new Point(x, y), width, height);
@@ -24,13 +25,13 @@ export enum Sprites {
   AndGate,
   NotGate,
   OrGate,
-  ClackerUp,
-  ClackerDown,
+  Clacker,
   ConnectorLeft,
   ConnectorRight,
   ConnectorUp,
   ConnectorDown,
   OptionWall,
+  Clock,
 }
 
 export class Sprite {
@@ -70,7 +71,7 @@ export class Sprite {
     const out: Sprite[] = [];
     for (const output of this.outputs) {
       for (const sprite of sprites) {
-        if (sprite === this || !sprite.powerable) continue;
+        if (sprite === this) continue;
         for (const input of sprite.inputs) {
           if (output.relativeTo(this.boundingbox).intersects(input.relativeTo(sprite.boundingbox))) {
             out.push(sprite);
@@ -86,7 +87,7 @@ export class Sprite {
     const out: Sprite[] = [];
     for (const input of this.inputs) {
       for (const sprite of sprites) {
-        if (sprite === this || !sprite.powerable) continue;
+        if (sprite === this) continue;
         for (const output of sprite.outputs) {
           if (output.relativeTo(sprite.boundingbox).intersects(input.relativeTo(this.boundingbox))) {
             out.push(sprite);
@@ -153,6 +154,16 @@ export class Sprite {
     this.pos.y = (json as any).y;
     return this;
   }
+
+  // Called when power has been applied to at least one input.
+  // This should decide whether this sprite is now "powered".
+  power() {
+    if (!this.powerable) return;
+    this.powered = true;
+  }
+
+  // Called every game tick, now is the time to update the internal state.
+  tick(tick: number) {}
 }
 
 export function newSprite(src: Sprites|object): Sprite {
@@ -222,7 +233,6 @@ export class OptionWall extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
     ctx.lineWidth = 2;
     ctx.strokeStyle = this.colour;
     ctx.fillStyle = this.colour;
@@ -294,12 +304,11 @@ export class AndGate extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
     // Top Connector
-    _connector(ctx, this.pos.x + h, this.pos.y + 10, this.colour);
+    connector(ctx, this.pos.x + h, this.pos.y + 10, this.colour);
     ctx.fillRect(this.pos.x, this.pos.y + 9, h, 2);
     // Bottom Connector.
-    _connector(ctx, this.pos.x + h, this.pos.y + blockSize - 10, this.colour);
+    connector(ctx, this.pos.x + h, this.pos.y + blockSize - 10, this.colour);
     ctx.fillRect(this.pos.x, this.pos.y + blockSize - 10, h, 2);
 
     ctx.fillRect(this.pos.x - h, this.pos.y, h, 2);
@@ -340,8 +349,7 @@ export class NotGate extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
-    _connector(ctx, this.pos.x + h, this.pos.y + h, this.colour);
+    connector(ctx, this.pos.x + h, this.pos.y + h, this.colour);
 
     ctx.beginPath();
     ctx.arc(this.pos.x - h - 7, this.pos.y + h, 7, 0, Math.PI * 2);
@@ -387,12 +395,11 @@ export class OrGate extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
     // Top Connector.
-    _connector(ctx, this.pos.x + h, this.pos.y + 10, this.colour);
+    connector(ctx, this.pos.x + h, this.pos.y + 10, this.colour);
     ctx.fillRect(this.pos.x, this.pos.y + 9, h, 2);
     // Bottom Connector.
-    _connector(ctx, this.pos.x + h, this.pos.y + blockSize - 10, this.colour);
+    connector(ctx, this.pos.x + h, this.pos.y + blockSize - 10, this.colour);
     ctx.fillRect(this.pos.x, this.pos.y + blockSize - 10, h, 2);
 
     ctx.beginPath();
@@ -433,10 +440,10 @@ export class OrGate extends Sprite {
   }
 }
 
-export class ClackerUp extends Sprite {
+export class Clacker extends Sprite {
   constructor(json?: any) {
     super(json);
-    this.type = Sprites.ClackerUp;
+    this.type = Sprites.Clacker;
     this.powerable = true;
     this.inputs = [
       boundingbox(0, 0, 40, 40),
@@ -449,27 +456,6 @@ export class ClackerUp extends Sprite {
       ctx.textBaseline = 'top';
       ctx.font = '10px Apple';
       ctx.fillText('CLKU', this.pos.x + 3, this.pos.y + 15);
-    }
-    super.finishDraw(ctx);
-  }
-}
-
-export class ClackerDown extends Sprite {
-  constructor(json?: any) {
-    super(json);
-    this.type = Sprites.ClackerDown;
-    this.powerable = true;
-    this.inputs = [
-      boundingbox(0, 0, 40, 40),
-    ];
-  }
-
-  draw(ctx: CanvasRenderingContext2D) {
-    super.draw(ctx);
-    if (constants.inEditor) {
-      ctx.textBaseline = 'top';
-      ctx.font = '10px Apple';
-      ctx.fillText('CLKD', this.pos.x + 3, this.pos.y + 15);
     }
     super.finishDraw(ctx);
   }
@@ -490,8 +476,7 @@ export class ConnectorLeft extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
-    _connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
+    connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
     ctx.fillRect(this.pos.x - blockSize / 2, this.pos.y + (blockSize / 2) - 1, blockSize, 2);
     ctx.beginPath();
     ctx.moveTo(this.pos.x - blockSize + h + 7, this.pos.y + h - 8);
@@ -521,8 +506,7 @@ export class ConnectorRight extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
-    _connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
+    connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
     ctx.fillRect(this.pos.x + blockSize / 2, this.pos.y + (blockSize / 2) - 1, blockSize, 2);
     ctx.beginPath();
     ctx.moveTo(this.pos.x + blockSize + h - 7, this.pos.y + h - 8);
@@ -552,8 +536,7 @@ export class ConnectorUp extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
-    _connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
+    connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
     ctx.fillRect(this.pos.x + blockSize / 2 - 1, this.pos.y - (blockSize / 2), 2, blockSize);
     ctx.beginPath();
     ctx.moveTo(this.pos.x + (h - 8), this.pos.y - h + 8);
@@ -583,8 +566,7 @@ export class ConnectorDown extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    const h = blockSize / 2;
-    _connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
+    connector(ctx, this.pos.x + (blockSize / 2), this.pos.y + (blockSize / 2), this.colour);
     ctx.fillRect(this.pos.x + blockSize / 2 - 1, this.pos.y + (blockSize / 2), 2, blockSize);
     ctx.beginPath();
     ctx.moveTo(this.pos.x + (h - 8), this.pos.y + blockSize + h - 8);
@@ -599,12 +581,152 @@ export class ConnectorDown extends Sprite {
   }
 }
 
-function _connector(ctx: CanvasRenderingContext2D, x: number, y: number, colour: string) {
+export class Clock extends Sprite {
+  private frame: number = 0;
+
+  constructor(json?: any) {
+    super(json);
+    this.type = Sprites.Clock;
+    this.powerable = false;
+    this.powered = false;
+    this.inputs = [];
+    this.outputs = [
+      boundingbox(11, blockSize + 11, 18, 18),
+    ];
+  }
+
+  tick(tick: number) {
+    this.frame = (this.frame + 1) % 8;
+    if (this.frame === 0) {
+      this.powered = true;
+      this.lastPower = tick;
+    } else {
+      this.powered = false;
+    }
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    super.draw(ctx);
+
+    const cx = this.pos.x + h;
+    const cy = this.pos.y + h;
+
+    // Draw the hands greyed out.
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#333333';
+    // 6
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy + blockSize);
+    // 7:30
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(this.pos.x + 6, this.pos.y + blockSize - 6);
+    // 9
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(this.pos.x, cy);
+    // 10:30
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(this.pos.x + 6, this.pos.y + 6);
+    // 12
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, this.pos.y);
+    // 1:30
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + 6);
+    // 3
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(this.pos.x + blockSize, cy);
+    // 4:30
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + blockSize - 6);
+
+    ctx.stroke();
+
+    // Draw the face.
+    ctx.beginPath();
+    ctx.arc(cx, cy, h, 0, Math.PI * 2);
+    ctx.strokeStyle = this.colour;
+    ctx.fillStyle = this.colour;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    connector(ctx, cx, cy, this.colour);
+
+    // Draw the hand at the right angle.
+    ctx.moveTo(cx, cy);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = this.colour;
+
+    switch (this.frame) {
+      case 0:
+        // 6
+        ctx.lineTo(cx, cy + blockSize);
+        break;
+      case 1:
+        // 7:30
+        ctx.lineTo(this.pos.x + 6, this.pos.y + blockSize - 6);
+        break;
+      case 2:
+        // 9
+        ctx.lineTo(this.pos.x, cy);
+        break;
+      case 3:
+        // 10:30
+        ctx.lineTo(this.pos.x + 6, this.pos.y + 6);
+        break;
+      case 4:
+        // 12
+        ctx.lineTo(cx, this.pos.y);
+        break;
+      case 5:
+        // 1:30
+        ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + 6);
+        break;
+      case 6:
+        // 3
+        ctx.lineTo(this.pos.x + blockSize, cy);
+        break;
+      case 7:
+        // 4:30
+        ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + blockSize - 6);
+        break;
+    }
+    ctx.stroke();
+
+    // Output
+    ctx.beginPath();
+    ctx.moveTo(this.pos.x + (h - 8), this.pos.y + blockSize + h - 8);
+    ctx.lineTo(this.pos.x + h, this.pos.y + blockSize + h);
+    ctx.lineTo(this.pos.x + (h + 8), this.pos.y + blockSize + h - 8);
+    ctx.stroke();
+    super.finishDraw(ctx);
+  }
+
+  get boundingbox(): BoundingBox {
+    return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize * 2);
+  }
+}
+
+function connector(ctx: CanvasRenderingContext2D, x: number, y: number, colour: string) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.strokeStyle = colour;
+  ctx.fillStyle = colour;
   ctx.lineWidth = 5;
   ctx.stroke();
   ctx.fill();
   ctx.restore();
+}
+
+export function spritesWithInputAt(pos: BoundingBox, sprites: Sprite[]): Sprite[] {
+  const out: Sprite[] = [];
+  for (const sprite of sprites) {
+    if (!sprite.powerable) continue;
+    for (const input of sprite.inputs) {
+      if (pos.intersects(input.relativeTo(sprite.boundingbox))) {
+        out.push(sprite);
+      }
+    }
+  }
+  return out;
 }

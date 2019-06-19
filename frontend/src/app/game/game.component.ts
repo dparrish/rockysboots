@@ -7,7 +7,7 @@ import {constants} from '../constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from '../event-loop';
 import {GameMap, loadMap} from '../game-map';
 import {BoundingBox, Point} from '../position';
-import {newSprite, Player, Sprite, Sprites} from '../sprites';
+import {newSprite, Player, Sprite, Sprites, spritesWithInputAt} from '../sprites';
 
 @Component({selector: 'app-game', templateUrl: './game.component.html', styleUrls: ['./game.component.css']})
 export class GameComponent implements AfterViewInit {
@@ -57,29 +57,25 @@ export class GameComponent implements AfterViewInit {
       this.map = this.maps[name];
       return Promise.resolve(this.map);
     }
-    return loadMap(name)
-        .then((map: GameMap) => {
-          console.log(`Loaded map ${name}`);
-          this.map = map;
-          this.map.sprites = _.map(map.sprites, newSprite);
-          this.maps[name] = map;
-          if (!this.player) {
-            this.player = newSprite({
-              x: this.map.playerStart.x,
-              y: this.map.playerStart.y,
-              type: Sprites.Player,
-            });
-          }
-          return map;
-        })
-        .then((map: GameMap) => {
-          for (const s of _.filter(map.sprites, (s: Sprite) => s.powerable)) {
-            // Set up the initial power states.
-            if (s.type === Sprites.NotGate) s.powered = true;
-          }
-          return map;
-          this.drawMap();
+    return loadMap(name).then((map: GameMap) => {
+      console.log(`Loaded map ${name}`);
+      this.map = map;
+      this.map.sprites = _.map(map.sprites, newSprite);
+      this.maps[name] = map;
+      if (!this.player) {
+        this.player = newSprite({
+          x: this.map.playerStart.x,
+          y: this.map.playerStart.y,
+          type: Sprites.Player,
         });
+      }
+      for (const s of _.filter(map.sprites, (s: Sprite) => s.powerable)) {
+        // Set up the initial power states.
+        if (s.type === Sprites.NotGate) s.powered = true;
+      }
+      this.drawMap();
+      return map;
+    });
   }
 
   drawMap() {
@@ -98,18 +94,6 @@ export class GameComponent implements AfterViewInit {
     this.player.draw(ctx);
   }
 
-  checkPlayerPower() {
-    for (const s of _.filter(
-             this.map.sprites, (s: Sprite) => s.powerable && this.player.boundingbox.intersects(s.boundingbox))) {
-      this.eventLoop.queue(new Event(afterMs(0), (event): Promise<any> => {
-        console.log(`Player powering`, s);
-        s.powered = true;
-        s.lastPower = this.tickCount;
-        return Promise.resolve();
-      }));
-    }
-  }
-
   spriteName(s: Sprite): string {
     return `${s.colour} ${Sprites[s.type]}`;
   }
@@ -119,19 +103,30 @@ export class GameComponent implements AfterViewInit {
     // console.log(`Game tick ${this.tickCount}`);
     // Wait for all events to fire continuing.
     await this.eventLoop.runTick(this.tickCount);
-    this.checkPlayerPower();
 
-    for (const s of _.filter(this.map.sprites, (s: Sprite) => s.powerable && !s.lastPower)) {
-      // Set the initial power state for each sprite.
+    // Set the initial power state for each sprite.
+    for (const s of _.filter(this.map.sprites, (s: Sprite) => s.powerable && s.lastPower === undefined)) {
       s.lastPower = this.tickCount;
       s.powerSpread = this.tickCount;
     }
 
-    for (const s of _.filter(this.map.sprites, (s: Sprite) => s.powerable)) {
+    // Update all sprites' internal state.
+    for (const s of this.map.sprites) {
+      s.tick(this.tickCount);
+    }
+
+    // Check for sprites that the player is powering.
+    for (const s of spritesWithInputAt(this.player.boundingbox, this.map.sprites)) {
+      console.log(`Player powering`, s);
+      s.powered = true;
+      s.lastPower = this.tickCount;
+    }
+
+    for (const s of this.map.sprites) {
       this.spreadPower(s);
     }
 
-    for (const s of _.filter(this.map.sprites, (s: Sprite) => s.powerable)) {
+    for (const s of this.map.sprites) {
       if (s.powered && s.lastPower < this.tickCount) {
         s.powered = false;
         s.lastPower = this.tickCount;
@@ -174,7 +169,7 @@ export class GameComponent implements AfterViewInit {
     // Spread power to any powerable sprites at the destination position.
     for (const dest of s.connectedOutputs(this.map.sprites)) {
       // console.log(`Sprite ${this.spriteName(s)} powering ${this.spriteName(dest)}`);
-      dest.powered = true;
+      dest.power();
 
       // Don't let this sprite immediately spread power.
       if (dest.powerSpread < this.tickCount - 1) dest.powerSpread = this.tickCount;
@@ -282,7 +277,6 @@ export class GameComponent implements AfterViewInit {
       });
     }
 
-    this.checkPlayerPower();
     this.drawMap();
   }
 
