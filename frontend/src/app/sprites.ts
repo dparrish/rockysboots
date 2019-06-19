@@ -94,14 +94,14 @@ export class Sprite {
         ctx.stroke();
         ctx.restore();
       }
-    }
 
-    // Draw bounding box.
-    ctx.save();
-    ctx.strokeStyle = 'darkgray';
-    const bb = this.boundingbox;
-    ctx.strokeRect(bb.topleft.x, bb.topleft.y, bb.width, bb.height);
-    ctx.restore();
+      // Draw bounding box.
+      ctx.save();
+      ctx.strokeStyle = 'darkgray';
+      const bb = this.boundingbox;
+      ctx.strokeRect(bb.topleft.x, bb.topleft.y, bb.width, bb.height);
+      ctx.restore();
+    }
   }
 
   toJson(): object {
