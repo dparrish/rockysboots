@@ -177,12 +177,14 @@ export class EditorComponent implements AfterViewInit {
     });
 
     event.cancelBubble = true;
+    this.drawMap();
   }
 
   pointerUp(event: any) {
     this.pointer.down = false;
     this.dropSprite();
     this.tempSprite = null;
+    this.drawMap();
   }
 
   mouseMove(event: any) {
@@ -193,6 +195,7 @@ export class EditorComponent implements AfterViewInit {
       this.tempSprite.pos.x = this.pointer.x;
       this.tempSprite.pos.y = this.pointer.y;
     }
+    this.drawMap();
   }
 
   mouseEnter(event: any) {
@@ -201,6 +204,7 @@ export class EditorComponent implements AfterViewInit {
     } else {
       this.pointer.down = false;
     }
+    this.drawMap();
   }
 
   mouseLeave(event: any) {

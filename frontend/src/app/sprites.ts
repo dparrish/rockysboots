@@ -305,11 +305,11 @@ export class AndGate extends Sprite {
     this.type = Sprites.AndGate;
     this.powerable = true;
     this.inputs = [
-      boundingbox(2 * blockSize + 11, 1, 18, 18),
-      boundingbox(2 * blockSize + 11, 21, 18, 18),
+      boundingbox(2 * blockSize + 10, 1, 18, 18),
+      boundingbox(2 * blockSize + 10, 21, 18, 18),
     ];
     this.outputs = [
-      boundingbox(10, 11, 18, 18),
+      boundingbox(10, 10, 18, 18),
     ];
   }
 
@@ -351,10 +351,10 @@ export class NotGate extends Sprite {
     this.type = Sprites.NotGate;
     this.powerable = true;
     this.inputs = [
-      boundingbox(2 * blockSize + 11, 11, 18, 18),
+      boundingbox(2 * blockSize + 10, 10, 18, 18),
     ];
     this.outputs = [
-      boundingbox(10, 11, 18, 18),
+      boundingbox(10, 10, 18, 18),
     ];
   }
 
@@ -411,11 +411,11 @@ export class OrGate extends Sprite {
     this.type = Sprites.OrGate;
     this.powerable = true;
     this.inputs = [
-      boundingbox(2 * blockSize + 11, 1, 18, 18),
-      boundingbox(2 * blockSize + 11, 21, 18, 18),
+      boundingbox(2 * blockSize + 10, 1, 18, 18),
+      boundingbox(2 * blockSize + 10, 21, 18, 18),
     ];
     this.outputs = [
-      boundingbox(10, 11, 18, 18),
+      boundingbox(10, 10, 18, 18),
     ];
   }
 
@@ -493,10 +493,10 @@ export class ConnectorLeft extends Sprite {
     this.type = Sprites.ConnectorLeft;
     this.powerable = true;
     this.inputs = [
-      boundingbox(blockSize + 11, 11, 18, 18),
+      boundingbox(blockSize + 10, 10, 18, 18),
     ];
     this.outputs = [
-      boundingbox(10, 11, 18, 18),
+      boundingbox(10, 10, 18, 18),
     ];
   }
 
@@ -523,10 +523,10 @@ export class ConnectorRight extends Sprite {
     this.type = Sprites.ConnectorRight;
     this.powerable = true;
     this.inputs = [
-      boundingbox(11, 11, 18, 18),
+      boundingbox(10, 10, 18, 18),
     ];
     this.outputs = [
-      boundingbox(blockSize + 10, 11, 18, 18),
+      boundingbox(blockSize + 10, 10, 18, 18),
     ];
   }
 
@@ -553,10 +553,10 @@ export class ConnectorUp extends Sprite {
     this.type = Sprites.ConnectorUp;
     this.powerable = true;
     this.inputs = [
-      boundingbox(11, blockSize + 11, 18, 18),
+      boundingbox(10, blockSize + 10, 18, 18),
     ];
     this.outputs = [
-      boundingbox(11, 11, 18, 18),
+      boundingbox(10, 10, 18, 18),
     ];
   }
 
@@ -583,10 +583,10 @@ export class ConnectorDown extends Sprite {
     this.type = Sprites.ConnectorDown;
     this.powerable = true;
     this.inputs = [
-      boundingbox(11, 11, 18, 18),
+      boundingbox(10, 10, 18, 18),
     ];
     this.outputs = [
-      boundingbox(11, blockSize + 11, 18, 18),
+      boundingbox(10, blockSize + 10, 18, 18),
     ];
   }
 
@@ -617,7 +617,7 @@ export class Clock extends Sprite {
     this.powered = false;
     this.inputs = [];
     this.outputs = [
-      boundingbox(11, blockSize + 11, 18, 18),
+      boundingbox(10, blockSize + 10, 18, 18),
     ];
   }
 
