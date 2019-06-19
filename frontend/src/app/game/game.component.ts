@@ -43,7 +43,7 @@ export class GameComponent implements AfterViewInit {
 
       await this.loadMap(environment.initialMap);
       setInterval(async () => {
-        await this.drawMap();
+        await this.eventLoop.run();
       }, 1000 / 30);
       await this.gameTick();
       setInterval(async () => {
@@ -78,13 +78,11 @@ export class GameComponent implements AfterViewInit {
             if (s.type === Sprites.NotGate) s.powered = true;
           }
           return map;
+          this.drawMap();
         });
   }
 
-  async drawMap() {
-    // Wait for all events to fire before drawing the map.
-    await this.eventLoop.run();
-
+  drawMap() {
     const canvas = document.getElementById('board') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'black';
@@ -139,6 +137,7 @@ export class GameComponent implements AfterViewInit {
         s.lastPower = this.tickCount;
       }
     }
+    this.drawMap();
   }
 
   spreadPower(s: Sprite) {
@@ -284,6 +283,7 @@ export class GameComponent implements AfterViewInit {
     }
 
     this.checkPlayerPower();
+    this.drawMap();
   }
 
   keyUp(event) {
