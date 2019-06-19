@@ -23,8 +23,8 @@ export class BoundingBox {
 
   intersects(other: BoundingBox): boolean {
     return (
-        (Math.abs(this.topleft.x - other.topleft.x) * 2 < this.width + other.width) &&
-        (Math.abs(this.topleft.y - other.topleft.y) * 2 < this.height + other.height));
+        this.topleft.x < other.topleft.x + other.width && this.topleft.x + this.width > other.topleft.x &&
+        this.topleft.y < other.topleft.y + other.height && this.topleft.y + this.height > other.topleft.y);
   }
 
   toString(): string {
