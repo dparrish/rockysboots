@@ -173,7 +173,7 @@ export class GameComponent implements AfterViewInit {
     if (!pos) return;
 
     // Spread power to any powerable sprites at the destination position.
-    for (const dest of _.filter(this.powerableAt(pos), (s: Sprite) => s.powerable)) {
+    for (const dest of s.connectedOutputs(this.map.sprites)) {
       // console.log(`Sprite ${this.spriteName(s)} powering ${this.spriteName(dest)}`);
       dest.powered = true;
 
@@ -184,10 +184,6 @@ export class GameComponent implements AfterViewInit {
       s.powerSpread = this.tickCount;
       dest.lastPower = this.tickCount;
     }
-  }
-
-  powerableAt(pos: Point): any[] {
-    return _.filter(this.map.sprites, (s: Sprite) => s.powerable && (s.pos.y === pos.y && s.pos.x === pos.x));
   }
 
   canMoveTo(player: Player): boolean {

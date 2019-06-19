@@ -65,6 +65,38 @@ export class Sprite {
     return `${this.colour} ${Sprites[this.type]}`;
   }
 
+  // Get all sprites where one of our outputs is connected to one of their inputs.
+  connectedOutputs(sprites: Sprite[]): Sprite[] {
+    const out: Sprite[] = [];
+    for (const output of this.outputs) {
+      for (const sprite of sprites) {
+        if (sprite === this || !sprite.powerable) continue;
+        for (const input of sprite.inputs) {
+          if (output.relativeTo(this.boundingbox).intersects(input.relativeTo(sprite.boundingbox))) {
+            out.push(sprite);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  // Get all sprites where one of our inputs is connected to one of their outputs.
+  connectedInputs(sprites: Sprite[]): Sprite[] {
+    const out: Sprite[] = [];
+    for (const input of this.inputs) {
+      for (const sprite of sprites) {
+        if (sprite === this || !sprite.powerable) continue;
+        for (const output of sprite.outputs) {
+          if (output.relativeTo(sprite.boundingbox).intersects(input.relativeTo(this.boundingbox))) {
+            out.push(sprite);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
   get boundingbox(): BoundingBox {
     return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize);
   }
@@ -127,7 +159,6 @@ export function newSprite(src: Sprites|object): Sprite {
   if ((src as any).type !== undefined) {
     return new (sprites as any)[Sprites[(src as any).type]](src);
   }
-  console.log(`Creating new sprite ${Sprites[src as Sprites]} from`, src);
   return new (sprites as any)[Sprites[src as Sprites]]();
 }
 

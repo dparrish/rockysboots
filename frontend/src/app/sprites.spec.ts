@@ -1,3 +1,4 @@
+import {constants} from './constants/constants.module';
 import {newSprite, Sprite, Sprites} from './sprites';
 
 describe('Sprites', () => {
@@ -25,4 +26,33 @@ describe('Sprites', () => {
     const s = newSprite({type: Sprites.Text, x: 10, y: 20, fixed: false});
     expect(s.fixed).toEqual(true);
   });
+
+  it('should match outputs to inputs', () => {
+    const sprites = [
+      // Source sprite.
+      newSprite({type: Sprites.ConnectorRight, x: 0, y: 0, colour: 'source'}),
+      // Should be connected.
+      newSprite({type: Sprites.ConnectorRight, x: constants.blockSize, y: 0, colour: 'connected'}),
+      // Shouldn't be connected.
+      newSprite({type: Sprites.ConnectorRight, x: constants.blockSize, y: 100, colour: 'notconnected'}),
+    ];
+    const connected = sprites[0].connectedOutputs(sprites);
+    expect(connected.length).toEqual(1);
+    expect(connected[0]).toEqual(sprites[1]);
+  });
+
+  it('should match inputs to outputs', () => {
+    const sprites = [
+      // Source sprite.
+      newSprite({type: Sprites.ConnectorRight, x: 0, y: 0, colour: 'source'}),
+      // Should be connected.
+      newSprite({type: Sprites.ConnectorRight, x: constants.blockSize, y: 0, colour: 'connected'}),
+      // Shouldn't be connected.
+      newSprite({type: Sprites.ConnectorRight, x: constants.blockSize, y: 100, colour: 'notconnected'}),
+    ];
+    const connected = sprites[1].connectedInputs(sprites);
+    expect(connected.length).toEqual(1);
+    expect(connected[0]).toEqual(sprites[0]);
+  });
 });
+
