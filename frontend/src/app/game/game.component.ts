@@ -72,6 +72,7 @@ export class GameComponent implements AfterViewInit {
           type: Sprites.Player,
         });
       }
+      this.eventLoop.sprites = this.eventLoop.sprites.concat(_.filter(this.map.sprites, (s: Sprite) => s.powerable));
       this.drawMap();
       return map;
     });
@@ -102,11 +103,6 @@ export class GameComponent implements AfterViewInit {
     // Wait for all events to fire continuing.
     await this.eventLoop.tick();
 
-    // Update all sprites' internal state.
-    for (const s of this.map.sprites) {
-      s.tick(this.eventLoop, this.map);
-    }
-
     // Check for sprites that the player is powering.
     for (const s of spritesWithInputAt(this.player.boundingbox, this.map.sprites)) {
       console.log(`Player powering`, s);
@@ -120,9 +116,6 @@ export class GameComponent implements AfterViewInit {
     return !_.find(this.map.sprites, (s: Sprite) => {
       // Find all impassable sprites that intersect with the player's new position.
       if (s.passable) return false;
-      if (s.boundingbox.intersects(player.boundingbox)) {
-        console.log(`player intersects with ${s} bounding box at ${s.boundingbox}`);
-      }
       return s.boundingbox.intersects(player.boundingbox);
     });
   }

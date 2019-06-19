@@ -162,15 +162,18 @@ export class Sprite {
     if (!this.powerable) return;
     this.powered = true;
     eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
-      for (const sprite of this.connectedOutputs(this.map.sprites)) {
+      for (const sprite of this.connectedOutputs(eventLoop.sprites)) {
         sprite.power(eventLoop);
       }
       this.powered = false;
     });
   }
 
-  // Called every game tick, now is the time to update the internal state.
-  tick(eventLoop: EventLoop) {}
+  // Called at the start of every game tick, now is the time to update the internal state.
+  tickStart(eventLoop: EventLoop) {}
+
+  // Called at the end of every game tick, now is the time to update the internal state.
+  tickEnd(eventLoop: EventLoop) {}
 }
 
 export function newSprite(map: GameMap, src: Sprites|object): Sprite {
@@ -391,7 +394,7 @@ export class NotGate extends Sprite {
 
   power(eventLoop: EventLoop) {
     this.powered = true;
-    for (const sprite of this.connectedInputs(this.map.sprites)) {
+    for (const sprite of this.connectedInputs(eventLoop.sprites)) {
       if (sprite.powered) this.powered = false;
       break;
     }
@@ -400,7 +403,7 @@ export class NotGate extends Sprite {
     }
   }
 
-  tick(eventLoop: EventLoop) {
+  tickStart(eventLoop: EventLoop) {
     this.power(eventLoop);
   }
 }
@@ -613,7 +616,7 @@ export class Clock extends Sprite {
   constructor(json?: any) {
     super(json);
     this.type = Sprites.Clock;
-    this.powerable = false;
+    this.powerable = true;
     this.powered = false;
     this.inputs = [];
     this.outputs = [
@@ -621,18 +624,19 @@ export class Clock extends Sprite {
     ];
   }
 
-  tick(eventLoop: EventLoop) {
+  tickStart(eventLoop: EventLoop) {
     this.frame = (this.frame + 1) % 8;
-    if (this.frame === 0) {
-      this.powered = true;
-      eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
-        for (const sprite of this.connectedOutputs(this.map.sprites)) {
-          sprite.power(eventLoop);
-        }
-      });
-    } else {
+    if (this.frame !== 0) {
       this.powered = false;
+      return;
     }
+
+    this.powered = true;
+    eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
+      for (const sprite of this.connectedOutputs(eventLoop.sprites)) {
+        sprite.power(eventLoop);
+      }
+    });
   }
 
   draw(ctx: CanvasRenderingContext2D) {

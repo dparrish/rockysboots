@@ -3,6 +3,7 @@ import {Injectable} from '@angular/core';
 import * as _ from 'lodash';
 import * as moment from 'moment';
 import {environment} from '../environments/environment';
+import {Sprite} from './sprites';
 
 interface When {
   // Game tick.
@@ -40,6 +41,7 @@ export class EventLoop {
   currentTick: number = 0;
   tickQueue: Event[] = [];
   timeQueue: Event[] = [];
+  sprites: Sprite[] = [];
 
   run(): Promise<any> {
     // Fire all the events that are currently ready right now.
@@ -60,6 +62,11 @@ export class EventLoop {
   tick(): Promise<any> {
     this.currentTick++;
 
+    // Update all sprites' internal state.
+    for (const sprite of this.sprites) {
+      sprite.tickStart(this);
+    }
+
     // Fire all the events that are currently ready for the current tick.
     const promises: Promise<any>[] = [];
     while (this.tickQueue.length) {
@@ -72,7 +79,12 @@ export class EventLoop {
       event.tick = this.currentTick;
       promises.push(event.callback(event));
     }
-    return Promise.all(promises);
+
+    return Promise.all(promises).then(() => {
+      for (const sprite of this.sprites) {
+        sprite.tickEnd(this);
+      }
+    });
   }
 
   queue(when: When, callback: EventCallback) {
