@@ -3,6 +3,7 @@ import * as _ from 'lodash';
 
 import {environment} from '../../environments/environment';
 import {constants} from '../constants/constants.module';
+import {afterMs, atTick, Event, EventLoop} from '../event-loop';
 import {GameMap, loadMap} from '../game-map';
 import {Point} from '../position';
 import {newSprite, Player, Sprite, Sprites} from '../sprites';
@@ -38,9 +39,8 @@ export class EditorComponent implements AfterViewInit {
   drawGrid: boolean = false;
   playerSprite: Player = null;
   tempSprite: Sprite = null;
-  tickCount: number = 0;
 
-  constructor() {
+  constructor(private eventLoop: EventLoop) {
     constants.inEditor = true;
     this.Sprites = Sprites;
     const sn = Object.keys(Sprites);
@@ -75,9 +75,12 @@ export class EditorComponent implements AfterViewInit {
 
       await this.loadMapList();
       await this.loadMap('sprite-test');
-      this.drawMap();
-      window.setInterval(() => {
-        this.gameTick();
+      await this.gameTick();
+      setInterval(async () => {
+        await this.eventLoop.run();
+      }, 1000 / 30);
+      window.setInterval(async () => {
+        await this.gameTick();
       }, 1000 / 4);
     }, 1);
   }
@@ -164,7 +167,7 @@ export class EditorComponent implements AfterViewInit {
     this.pointer.x = event.offsetX;
     this.pointer.y = event.offsetY;
     this.snapPointer();
-    this.tempSprite = newSprite({
+    this.tempSprite = newSprite(this.map, {
       x: this.pointer.x,
       y: this.pointer.y,
       type: this.currentSprite,
@@ -239,7 +242,7 @@ export class EditorComponent implements AfterViewInit {
   loadMap(name: string): Promise<any> {
     return loadMap(name).then((map: GameMap) => {
       this.map = map;
-      this.map.sprites = _.map(map.sprites, newSprite);
+      this.map.sprites = _.map(map.sprites, s => newSprite(this.map, s));
       this.playerSprite = new Player({
         x: this.map.playerStart.x,
         y: this.map.playerStart.y,
@@ -251,11 +254,11 @@ export class EditorComponent implements AfterViewInit {
 
   updateExitsTicks() {}
 
-  gameTick() {
-    this.tickCount++;
+  async gameTick() {
+    await this.eventLoop.tick();
     // Update all sprites' internal state.
     for (const s of this.map.sprites) {
-      s.tick(this.tickCount);
+      s.tick(this.eventLoop, this.map);
     }
     this.drawMap();
   }
@@ -285,7 +288,7 @@ export class EditorComponent implements AfterViewInit {
     switch (direction) {
       case 'up':
         for (let i = 0; i < constants.sizeX; i++) {
-          sprites.push(newSprite({
+          sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
             x: i * constants.blockSize,
@@ -295,7 +298,7 @@ export class EditorComponent implements AfterViewInit {
         break;
       case 'down':
         for (let i = 0; i < constants.sizeX; i++) {
-          sprites.push(newSprite({
+          sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
             x: i * constants.blockSize,
@@ -305,7 +308,7 @@ export class EditorComponent implements AfterViewInit {
         break;
       case 'left':
         for (let i = 0; i < constants.sizeY; i++) {
-          sprites.push(newSprite({
+          sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
             x: 0,
@@ -315,7 +318,7 @@ export class EditorComponent implements AfterViewInit {
         break;
       case 'right':
         for (let i = 0; i < constants.sizeY; i++) {
-          sprites.push(newSprite({
+          sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
             x: (constants.sizeX - 1) * constants.blockSize,

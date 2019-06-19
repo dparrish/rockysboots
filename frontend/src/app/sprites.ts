@@ -1,4 +1,6 @@
 import {constants} from './constants/constants.module';
+import {afterMs, atTick, Event, EventLoop} from './event-loop';
+import {GameMap} from './game-map';
 import {BoundingBox, Point} from './position';
 import * as sprites from './sprites';
 
@@ -41,9 +43,8 @@ export class Sprite {
   colour: string;
   fixed: boolean = false;
   passable: boolean = true;
+  map: GameMap = null;
 
-  lastPower: number;
-  powerSpread: number;
   powerable: boolean = false;
   powered: boolean = false;
 
@@ -155,22 +156,32 @@ export class Sprite {
     return this;
   }
 
-  // Called when power has been applied to at least one input.
+  // Called when the power state may change.
   // This should decide whether this sprite is now "powered".
-  power() {
+  power(eventLoop: EventLoop) {
     if (!this.powerable) return;
     this.powered = true;
+    eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
+      for (const sprite of this.connectedOutputs(this.map.sprites)) {
+        sprite.power(eventLoop);
+      }
+      this.powered = false;
+    });
   }
 
   // Called every game tick, now is the time to update the internal state.
-  tick(tick: number) {}
+  tick(eventLoop: EventLoop) {}
 }
 
-export function newSprite(src: Sprites|object): Sprite {
+export function newSprite(map: GameMap, src: Sprites|object): Sprite {
+  let s: Sprite = null;
   if ((src as any).type !== undefined) {
-    return new (sprites as any)[Sprites[(src as any).type]](src);
+    s = new (sprites as any)[Sprites[(src as any).type]](src);
+  } else {
+    s = new (sprites as any)[Sprites[src as Sprites]]();
   }
-  return new (sprites as any)[Sprites[src as Sprites]]();
+  s.map = map;
+  return s;
 }
 
 export class Empty extends Sprite {
@@ -376,6 +387,21 @@ export class NotGate extends Sprite {
 
   get boundingbox(): BoundingBox {
     return boundingbox(this.pos.x - blockSize * 2, this.pos.y, blockSize * 3, blockSize);
+  }
+
+  power(eventLoop: EventLoop) {
+    this.powered = true;
+    for (const sprite of this.connectedInputs(this.map.sprites)) {
+      if (sprite.powered) this.powered = false;
+      break;
+    }
+    if (this.powered) {
+      super.power(eventLoop);
+    }
+  }
+
+  tick(eventLoop: EventLoop) {
+    this.power(eventLoop);
   }
 }
 
@@ -595,11 +621,15 @@ export class Clock extends Sprite {
     ];
   }
 
-  tick(tick: number) {
+  tick(eventLoop: EventLoop) {
     this.frame = (this.frame + 1) % 8;
     if (this.frame === 0) {
       this.powered = true;
-      this.lastPower = tick;
+      eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
+        for (const sprite of this.connectedOutputs(this.map.sprites)) {
+          sprite.power(eventLoop);
+        }
+      });
     } else {
       this.powered = false;
     }

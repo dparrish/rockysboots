@@ -29,18 +29,15 @@ export function atTick(tick: number): When {
 type EventCallback = (event: Event) => Promise<any>;
 
 export class Event {
-  when: When;
-  callback: EventCallback;
   eventLoop?: EventLoop;
+  tick: number = 0;
 
-  constructor(when: When, callback: EventCallback) {
-    this.when = when;
-    this.callback = callback;
-  }
+  constructor(public when: When, public callback: EventCallback) {}
 }
 
 @Injectable({providedIn: 'root'})
 export class EventLoop {
+  currentTick: number = 0;
   tickQueue: Event[] = [];
   timeQueue: Event[] = [];
 
@@ -60,22 +57,26 @@ export class EventLoop {
     return Promise.all(promises);
   }
 
-  runTick(tick: number): Promise<any> {
+  tick(): Promise<any> {
+    this.currentTick++;
+
     // Fire all the events that are currently ready for the current tick.
     const promises: Promise<any>[] = [];
     while (this.tickQueue.length) {
       const event = this.tickQueue[0];
-      if (event.when.tick > tick) {
+      if (event.when.tick > this.currentTick) {
         break;
       }
       this.tickQueue.shift();
       event.eventLoop = this;
+      event.tick = this.currentTick;
       promises.push(event.callback(event));
     }
     return Promise.all(promises);
   }
 
-  queue(event: Event) {
+  queue(when: When, callback: EventCallback) {
+    const event = new Event(when, callback);
     if (event.when.time >= 0) {
       this.timeQueue.push(event);
       this.timeQueue.sort((a: Event, b: Event): number => cmp(a.when.time, b.when.time));

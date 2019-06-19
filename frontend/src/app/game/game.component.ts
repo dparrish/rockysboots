@@ -16,7 +16,6 @@ export class GameComponent implements AfterViewInit {
   canvasHeight = constants.sizeY * constants.blockSize;
   map: GameMap = new GameMap();
   maps: {[name: string]: GameMap} = {};
-  tickCount = 0;
   player: Player = null;
   modifiers: {[name: string]: boolean} = {
     shift: false,
@@ -42,10 +41,10 @@ export class GameComponent implements AfterViewInit {
       });
 
       await this.loadMap(environment.initialMap);
+      await this.gameTick();
       setInterval(async () => {
         await this.eventLoop.run();
       }, 1000 / 30);
-      await this.gameTick();
       setInterval(async () => {
         await this.gameTick();
       }, environment.msPerTick);
@@ -60,18 +59,14 @@ export class GameComponent implements AfterViewInit {
     return loadMap(name).then((map: GameMap) => {
       console.log(`Loaded map ${name}`);
       this.map = map;
-      this.map.sprites = _.map(map.sprites, newSprite);
+      this.map.sprites = _.map(map.sprites, s => newSprite(this.map, s));
       this.maps[name] = map;
       if (!this.player) {
-        this.player = newSprite({
+        this.player = newSprite(this.map, {
           x: this.map.playerStart.x,
           y: this.map.playerStart.y,
           type: Sprites.Player,
         });
-      }
-      for (const s of _.filter(map.sprites, (s: Sprite) => s.powerable)) {
-        // Set up the initial power states.
-        if (s.type === Sprites.NotGate) s.powered = true;
       }
       this.drawMap();
       return map;
@@ -99,85 +94,22 @@ export class GameComponent implements AfterViewInit {
   }
 
   async gameTick() {
-    this.tickCount++;
-    // console.log(`Game tick ${this.tickCount}`);
+    // console.log(`Game tick ${this.eventLoop.currentTick}`);
     // Wait for all events to fire continuing.
-    await this.eventLoop.runTick(this.tickCount);
-
-    // Set the initial power state for each sprite.
-    for (const s of _.filter(this.map.sprites, (s: Sprite) => s.powerable && s.lastPower === undefined)) {
-      s.lastPower = this.tickCount;
-      s.powerSpread = this.tickCount;
-    }
+    await this.eventLoop.tick();
 
     // Update all sprites' internal state.
     for (const s of this.map.sprites) {
-      s.tick(this.tickCount);
+      s.tick(this.eventLoop, this.map);
     }
 
     // Check for sprites that the player is powering.
     for (const s of spritesWithInputAt(this.player.boundingbox, this.map.sprites)) {
       console.log(`Player powering`, s);
-      s.powered = true;
-      s.lastPower = this.tickCount;
+      s.power(this.eventLoop);
     }
 
-    for (const s of this.map.sprites) {
-      this.spreadPower(s);
-    }
-
-    for (const s of this.map.sprites) {
-      if (s.powered && s.lastPower < this.tickCount) {
-        s.powered = false;
-        s.lastPower = this.tickCount;
-      }
-    }
     this.drawMap();
-  }
-
-  spreadPower(s: Sprite) {
-    // Each sprite can only spread power once per tick.
-    if (s.powerSpread === this.tickCount) return;
-
-    let pos: Point;
-    switch (s.type) {
-      case Sprites.ConnectorUp:
-        if (s.powered) pos = s.pos.add(0, -constants.blockSize);
-        break;
-
-      case Sprites.ConnectorDown:
-        if (s.powered) pos = s.pos.add(0, constants.blockSize);
-        break;
-
-      case Sprites.ConnectorLeft:
-        if (s.powered) pos = s.pos.add(-constants.blockSize, 0);
-        break;
-
-      case Sprites.ConnectorRight:
-        if (s.powered) pos = s.pos.add(constants.blockSize, 0);
-        break;
-
-      case Sprites.NotGate:
-        if (!s.powered) pos = s.pos.add((-2 * constants.blockSize), 0);
-        break;
-
-      default:
-        return;
-    }
-    if (!pos) return;
-
-    // Spread power to any powerable sprites at the destination position.
-    for (const dest of s.connectedOutputs(this.map.sprites)) {
-      // console.log(`Sprite ${this.spriteName(s)} powering ${this.spriteName(dest)}`);
-      dest.power();
-
-      // Don't let this sprite immediately spread power.
-      if (dest.powerSpread < this.tickCount - 1) dest.powerSpread = this.tickCount;
-
-      // Don't let this sprite spread power again this tick.
-      s.powerSpread = this.tickCount;
-      dest.lastPower = this.tickCount;
-    }
   }
 
   canMoveTo(player: Player): boolean {
@@ -233,12 +165,6 @@ export class GameComponent implements AfterViewInit {
       this.player.pos = this.player.pos.add(move);
       if (this.carrying) this.carrying.pos = this.carrying.pos.add(move);
     }
-
-    const moveSpriteToMap = (sprite: Sprite, from: GameMap, to: GameMap, pos: Point) => {
-      _.remove(from.sprites, (s: Sprite) => s === sprite);
-      to.sprites.push(sprite);
-      sprite.pos = pos;
-    };
 
     if (this.map.exits.right && this.player.pos.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
       // Moved to the right.
@@ -316,3 +242,11 @@ export class GameComponent implements AfterViewInit {
 
   mouseMove(event) {}
 }
+
+function moveSpriteToMap(sprite: Sprite, from: GameMap, to: GameMap, pos: Point) {
+  _.remove(from.sprites, (s: Sprite) => s === sprite);
+  to.sprites.push(sprite);
+  sprite.pos = pos;
+  sprite.map = to;
+}
+
