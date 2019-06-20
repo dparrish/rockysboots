@@ -66,12 +66,16 @@ export class EventLoop {
   }
 
   async tick(): Promise<any> {
+    // tickStart
+
     this.currentTick++;
 
     // Update all sprites' internal state.
     for (const sprite of this.sprites) {
       sprite.tickStart(this);
     }
+
+    // tickQueue
 
     // Fire all the events that are currently ready for the current tick.
     let promises: Promise<any>[] = [];
@@ -87,15 +91,21 @@ export class EventLoop {
     }
     await Promise.all(promises);
 
+    // tickInside
+
     promises = [];
     for (const cb of this.insideTickCallbacks) {
       promises.push(cb(this));
     }
     await Promise.all(promises);
 
+    // tickEnd
+
     for (const sprite of this.sprites) {
       sprite.tickEnd(this);
     }
+
+    // tickWait
   }
 
   queue(when: When, callback: EventCallback) {
