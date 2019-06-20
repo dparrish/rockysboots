@@ -28,6 +28,7 @@ export function atTick(tick: number): When {
 }
 
 type EventCallback = (event: Event) => Promise<any>;
+type InsideTickCallback = (eventLoop: EventLoop) => Promise<any>;
 
 export class Event {
   eventLoop?: EventLoop;
@@ -42,6 +43,7 @@ export class EventLoop {
   tickQueue: Event[] = [];
   timeQueue: Event[] = [];
   sprites: Sprite[] = [];
+  insideTickCallbacks: InsideTickCallback[] = [];
 
   run(): Promise<any> {
     // Fire all the events that are currently ready right now.
@@ -59,7 +61,11 @@ export class EventLoop {
     return Promise.all(promises);
   }
 
-  tick(): Promise<any> {
+  inside(cb: InsideTickCallback) {
+    this.insideTickCallbacks.push(cb);
+  }
+
+  async tick(): Promise<any> {
     this.currentTick++;
 
     // Update all sprites' internal state.
@@ -68,7 +74,7 @@ export class EventLoop {
     }
 
     // Fire all the events that are currently ready for the current tick.
-    const promises: Promise<any>[] = [];
+    let promises: Promise<any>[] = [];
     while (this.tickQueue.length) {
       const event = this.tickQueue[0];
       if (event.when.tick > this.currentTick) {
@@ -79,12 +85,17 @@ export class EventLoop {
       event.tick = this.currentTick;
       promises.push(event.callback(event));
     }
+    await Promise.all(promises);
 
-    return Promise.all(promises).then(() => {
-      for (const sprite of this.sprites) {
-        sprite.tickEnd(this);
-      }
-    });
+    promises = [];
+    for (const cb of this.insideTickCallbacks) {
+      promises.push(cb(this));
+    }
+    await Promise.all(promises);
+
+    for (const sprite of this.sprites) {
+      sprite.tickEnd(this);
+    }
   }
 
   queue(when: When, callback: EventCallback) {

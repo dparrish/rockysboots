@@ -1,3 +1,5 @@
+import * as _ from 'lodash';
+
 import {constants} from './constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from './event';
 import {GameMap} from './game-map';
@@ -169,11 +171,25 @@ export class Sprite {
     });
   }
 
+  // Move this sprite so that the supplied output lines up with the supplied input of another sprite.
+  connectOutputToInput(output: number, dest: Sprite, input: number) {
+    const a = this.outputs[output].relativeTo(this.boundingbox).topleft;
+    const b = dest.inputs[input].relativeTo(dest.boundingbox).topleft;
+    this.pos = this.pos.add(b.sub(a));
+  }
+
   // Called at the start of every game tick, now is the time to update the internal state.
   tickStart(eventLoop: EventLoop) {}
 
   // Called at the end of every game tick, now is the time to update the internal state.
-  tickEnd(eventLoop: EventLoop) {}
+  tickEnd(eventLoop: EventLoop) {
+    // Send power.
+    if (this.powered) {
+      for (const dest of this.connectedOutputs(eventLoop.sprites)) {
+        dest.power(eventLoop);
+      }
+    }
+  }
 }
 
 export function newSprite(map: GameMap, src: Sprites|object): Sprite {
@@ -262,6 +278,13 @@ export class OptionWall extends Sprite {
       ctx.fillText('O', this.pos.x + 10, this.pos.y + 10);
     }
     super.finishDraw(ctx);
+  }
+
+  power(eventLoop: EventLoop) {
+    // Received power, disable all other OptionWalls on the same map.
+    for (const s of _.filter(eventLoop.sprites, (s: Sprite) => s.map === this.map && s.type === this.type)) {
+      s.powered = s === this;
+    }
   }
 }
 
@@ -414,7 +437,7 @@ export class NotGate extends Sprite {
       }
     }
     if (this.powered) {
-      super.power(eventLoop);
+      // super.power(eventLoop);
     }
   }
 
@@ -641,17 +664,17 @@ export class Clock extends Sprite {
 
   tickStart(eventLoop: EventLoop) {
     this.frame = (this.frame + 1) % 8;
-    if (this.frame !== 0) {
-      this.powered = false;
-      return;
-    }
+    this.powered = this.frame === 0;
+  }
 
-    this.powered = true;
-    eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
-      for (const sprite of this.connectedOutputs(eventLoop.sprites)) {
-        sprite.power(eventLoop);
-      }
-    });
+  tickEnd(eventLoop: EventLoop) {
+    if (this.powered) {
+      eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
+        for (const sprite of this.connectedOutputs(eventLoop.sprites)) {
+          sprite.power(eventLoop);
+        }
+      });
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D) {

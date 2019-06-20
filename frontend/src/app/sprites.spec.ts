@@ -71,9 +71,8 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.Empty, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.Empty, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
@@ -85,9 +84,8 @@ describe('Invidivual Sprites', () => {
   describe('of type Player', () => {
     let sprite: Sprite;
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.Player, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.Player, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
@@ -100,9 +98,8 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.Text, x: 0, y: 0, text: 'Test text'});
+      sprite = newSprite(map, {type: Sprites.Text, x: 0, y: 0, colour: '0', text: 'Test text'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
@@ -115,9 +112,8 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.Boot, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.Boot, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
@@ -130,7 +126,7 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.AndGate, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.AndGate, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
       await eventLoop.tick();
     });
@@ -139,13 +135,38 @@ describe('Invidivual Sprites', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
     });
+
+    it('should not provide power with 0 inputs powered', async () => {
+      expect(sprite.powered).toEqual(false);
+    });
+
+    it('should not provide power with 1 input powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '1', x: 1000, y: 1000, powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(false);
+    });
+
+    it('should provide power with 2 inputs powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '2', x: 1000, y: 1000, powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      const b = newSprite(map, {type: Sprites.ConnectorLeft, colour: '3', x: 1000, y: 1000, powered: true});
+      eventLoop.sprites.push(b);
+      b.connectOutputToInput(0, sprite, 1);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
+    });
   });
 
   describe('of type NotGate', async () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.NotGate, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.NotGate, x: 0, y: 0, color: '0'});
       eventLoop.sprites.push(sprite);
       await eventLoop.tick();
     });
@@ -157,10 +178,15 @@ describe('Invidivual Sprites', () => {
 
     it('should provide power when not powered', async () => {
       expect(sprite.powered).toEqual(true);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
     });
 
     it('should not provide power when powered', async () => {
-      eventLoop.sprites.push(newSprite(map, {type: Sprites.ConnectorLeft, x: 40, y: 10, powered: true}));
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(true);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
     });
@@ -170,14 +196,38 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.OrGate, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.OrGate, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+
+    it('should not provide power with 0 inputs powered', async () => {
+      expect(sprite.powered).toEqual(false);
+    });
+
+    it('should provide power with 1 input powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '1', x: 1000, y: 1000, powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
+    });
+
+    it('should provide power with 2 inputs powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '2', x: 1000, y: 1000, powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      const b = newSprite(map, {type: Sprites.ConnectorLeft, colour: '3', x: 1000, y: 1000, powered: true});
+      eventLoop.sprites.push(b);
+      b.connectOutputToInput(0, sprite, 1);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
     });
   });
 
@@ -185,9 +235,8 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.Clacker, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.Clacker, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
@@ -200,14 +249,30 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+
+    it('should not provide power when not powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: false});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(false);
+    });
+
+    it('should provide power when powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
     });
   });
 
@@ -215,14 +280,30 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, color: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+
+    it('should not provide power when not powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, colour: '1', powered: false});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(false);
+    });
+
+    it('should provide power when powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, colour: '1', powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
     });
   });
 
@@ -230,14 +311,30 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, color: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+
+    it('should not provide power when not powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, colour: '1', powered: false});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(false);
+    });
+
+    it('should provide power when powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, colour: '1', powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
     });
   });
 
@@ -245,14 +342,30 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, color: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+
+    it('should not provide power when not powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, colour: '1', powered: false});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(false);
+    });
+
+    it('should provide power when powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, colour: '1', powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(true);
     });
   });
 
@@ -260,15 +373,43 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.OptionWall, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.OptionWall, x: 0, y: 0, color: '0', powered: false});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
-
 
     it('should have a valid bounding box', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+
+    it('should keep power when powered', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: true});
+      eventLoop.sprites.push(a);
+      a.connectOutputToInput(0, sprite, 0);
+      expect(sprite.powered).toEqual(false);
+      for (let i = 0; i < 10; i++) {
+        await eventLoop.tick();
+        expect(sprite.powered).toEqual(true);
+      }
+    });
+
+    it('should only have a single selected OptionWall per map', async () => {
+      const otherMap = new GameMap();
+      for (let i = 1; i <= 10; i++) {
+        const m = i > 5 ? map : otherMap;
+        const wall = newSprite(m, {type: Sprites.OptionWall, x: 0, y: 0, colour: `${i}`, powered: false});
+        eventLoop.sprites.push(wall);
+        const conn = newSprite(m, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: `${i}`, powered: true});
+        eventLoop.sprites.push(conn);
+        conn.connectOutputToInput(0, wall, 0);
+      }
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      let powered = 0;
+      for (const s of eventLoop.sprites) {
+        if (s.type === Sprites.OptionWall && s.map === map && s.powered) powered++;
+      }
+      expect(powered).toEqual(1);
     });
   });
 
@@ -276,14 +417,31 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.Clock, x: 0, y: 0});
+      sprite = newSprite(map, {type: Sprites.Clock, x: 0, y: 0, color: '0'});
       eventLoop.sprites.push(sprite);
-      await eventLoop.tick();
     });
 
     it('should have a valid bounding box', () => {
       expect(sprite.boundingbox.width).toBeGreaterThan(0);
       expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+
+    it('should provide power to a ConnectorLeft every 8 ticks', async () => {
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: false});
+      eventLoop.sprites.push(a);
+      sprite.connectOutputToInput(0, a, 0);
+      let connectorPowered = 0;
+      let clockPowered = 0;
+      while (eventLoop.currentTick < 17) {
+        await eventLoop.tick();
+        // Expect power propagation to take a tick, not during the same tick.
+        expect((sprite.powered === true && a.powered === false) || (sprite.powered === true && a.powered === false));
+        if (a.powered) connectorPowered++;
+        if (sprite.powered) clockPowered++;
+      }
+      // 16 frames means exactly 2 times that power was sent from the clock to the connector.
+      expect(connectorPowered).toEqual(2);
+      expect(clockPowered).toEqual(2);
     });
   });
 });
