@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 
 import {environment} from '../../environments/environment';
 import {constants} from '../constants/constants.module';
-import {afterMs, atTick, Event, EventLoop} from '../event-loop';
+import {afterMs, atTick, Event, EventLoop} from '../event';
 import {GameMap, loadMap} from '../game-map';
 import {Point} from '../position';
 import {newSprite, Player, Sprite, Sprites} from '../sprites';
@@ -260,10 +260,6 @@ export class EditorComponent implements AfterViewInit {
 
   async gameTick() {
     await this.eventLoop.tick();
-    // Update all sprites' internal state.
-    for (const s of this.map.sprites) {
-      s.tick(this.eventLoop, this.map);
-    }
     this.drawMap();
   }
 

@@ -4,7 +4,7 @@ import * as moment from 'moment';
 
 import {environment} from '../../environments/environment';
 import {constants} from '../constants/constants.module';
-import {afterMs, atTick, Event, EventLoop} from '../event-loop';
+import {afterMs, atTick, Event, EventLoop} from '../event';
 import {GameMap, loadMap} from '../game-map';
 import {BoundingBox, Point} from '../position';
 import {newSprite, Player, Sprite, Sprites, spritesWithInputAt} from '../sprites';
@@ -54,6 +54,7 @@ export class GameComponent implements AfterViewInit {
   loadMap(name: string): Promise<any> {
     if (this.maps[name]) {
       this.map = this.maps[name];
+      this.drawMap();
       return Promise.resolve(this.map);
     }
     return loadMap(name).then((map: GameMap) => {

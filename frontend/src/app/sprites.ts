@@ -1,5 +1,5 @@
 import {constants} from './constants/constants.module';
-import {afterMs, atTick, Event, EventLoop} from './event-loop';
+import {afterMs, atTick, Event, EventLoop} from './event';
 import {GameMap} from './game-map';
 import {BoundingBox, Point} from './position';
 import * as sprites from './sprites';
@@ -346,6 +346,19 @@ export class AndGate extends Sprite {
   get boundingbox(): BoundingBox {
     return boundingbox(this.pos.x - blockSize * 2, this.pos.y, blockSize * 3, blockSize);
   }
+
+  power(eventLoop: EventLoop) {
+    this.powered = false;
+    let c = 0;
+    for (const sprite of this.connectedInputs(eventLoop.sprites)) {
+      if (sprite.powered) {
+        c++;
+      }
+    }
+    if (c >= 2) {
+      super.power(eventLoop);
+    }
+  }
 }
 
 export class NotGate extends Sprite {
@@ -395,8 +408,10 @@ export class NotGate extends Sprite {
   power(eventLoop: EventLoop) {
     this.powered = true;
     for (const sprite of this.connectedInputs(eventLoop.sprites)) {
-      if (sprite.powered) this.powered = false;
-      break;
+      if (sprite.powered) {
+        this.powered = false;
+        break;
+      }
     }
     if (this.powered) {
       super.power(eventLoop);

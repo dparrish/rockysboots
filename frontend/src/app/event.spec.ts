@@ -1,4 +1,4 @@
-import {afterMs, atTick, Event, EventLoop} from './event-loop';
+import {afterMs, atTick, Event, EventLoop} from './event';
 
 describe('EventLoop', () => {
   it('should create an instance', () => {
