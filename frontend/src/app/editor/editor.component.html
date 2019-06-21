@@ -4,7 +4,11 @@
   <table>
     <tr>
       <td>Name:</td>
-      <td><input type='text' [(ngModel)]='map.name' />&nbsp;<button (click)='saveMap(this.map)'>Save</button></td>
+      <td>
+        <input type='text' [(ngModel)]='map.name' />&nbsp;
+        <button (click)='saveMap(this.map)'>Save</button>&nbsp;
+        <button (click)='checkAllMaps()'>Check all Maps</button>
+      </td>
     </tr>
     <tr valign='top'>
       <td>Sprites:</td>

@@ -61,11 +61,6 @@ export class GameComponent implements AfterViewInit {
     return this.mapServer.load(name).then((map: GameMap) => {
       console.log(`Loaded map ${name}`);
       this.map = map;
-      this.map.sprites = _.map(map.sprites, s => {
-        s = newSprite(this.map, s);
-        if (s.powerable) s.powered = false;
-        return s;
-      });
       this.maps[name] = map;
       if (!this.player) {
         this.player = newSprite(this.map, {

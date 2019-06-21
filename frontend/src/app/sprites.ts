@@ -47,6 +47,8 @@ export enum Sprites {
   Sign,
 }
 
+const jsonFields = ['type', 'text', 'colour', 'powered', 'fixed'];
+
 export class Sprite {
   type: Sprites;
   text: string;
@@ -63,8 +65,6 @@ export class Sprite {
   inputs: BoundingBox[] = [];
   // Bounding box for each output, relative to the bounding box of the sprite.
   outputs: BoundingBox[] = [];
-
-  jsonFields = ['type', 'text', 'colour', 'powered', 'fixed'];
 
   constructor(json?: any) {
     if (json) this.fromJson(json);
@@ -156,7 +156,7 @@ export class Sprite {
 
   toJson(): object {
     const json = {};
-    for (const field of this.jsonFields) {
+    for (const field of jsonFields) {
       json[field] = this[field];
     }
     (json as any).x = this.pos.x;
@@ -165,7 +165,7 @@ export class Sprite {
   }
 
   fromJson(json: object): Sprite {
-    for (const field of this.jsonFields) {
+    for (const field of jsonFields) {
       if (json[field] !== undefined) (this as any)[field] = json[field];
     }
     this.pos.x = (json as any).x;

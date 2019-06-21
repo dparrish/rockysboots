@@ -14,7 +14,7 @@ export class GameMap {
   };
   name = '';
   playerStart = {x: 2 * blockSize, y: 2 * blockSize};
-  sprites = [];
+  sprites: Sprite[] = [];
 
   constructor(json?: any) {
     this.sprites = [];
@@ -22,7 +22,7 @@ export class GameMap {
       this.exits = json.exits;
       this.name = json.name;
       this.playerStart = json.playerStart;
-      this.sprites = json.sprites;
+      this.sprites = _.map(json.sprites, s => newSprite(this, s));
       this.sortSprites();
     }
   }

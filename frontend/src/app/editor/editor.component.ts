@@ -227,7 +227,6 @@ export class EditorComponent implements AfterViewInit {
   loadMap(name: string): Promise<any> {
     return this.mapServer.load(name).then((map: GameMap) => {
       this.map = map;
-      this.map.sprites = _.map(map.sprites, s => newSprite(this.map, s));
       this.playerSprite = new Player({
         x: this.map.playerStart.x,
         y: this.map.playerStart.y,
@@ -369,5 +368,99 @@ export class EditorComponent implements AfterViewInit {
       promises.push(this.saveMap(newMap, true));
     }
     return Promise.all(promises);
+  }
+
+  async checkAllMaps() {
+    const maps: {[name: string]: GameMap} = {};
+    const promises: Promise<GameMap>[] = [];
+    for (const mapName of this.mapList) {
+      promises.push(this.mapServer.load(mapName).then(async (map: GameMap) => {
+        if (map.name === 'sprite-test' || map.name === 'empty') return null;
+        maps[map.name] = map;
+        return map;
+      }));
+    }
+    await Promise.all(promises);
+    for (const map of Object.values(maps)) {
+      console.log(`Checking map ${map.name} with ${map.sprites.length} sprites`);
+      const walls: {[dir: string]: Sprite[]} = {
+        up: map.getWall('up'),
+        down: map.getWall('down'),
+        left: map.getWall('left'),
+        right: map.getWall('right'),
+      };
+      let hasexit = false;
+      for (const dir of directions) {
+        const expected = dir === 'up' || dir === 'down' ? sizeX : sizeY;
+        if (!map.exits[dir]) {
+          if (walls[dir].length !== expected) {
+            console.error(`Map ${map.name} has wall gaps but no exit ${dir}`);
+          }
+          continue;
+        }
+        if (walls[dir].length === expected) {
+          console.error(`Map ${map.name} has exit ${dir} but no wall gaps (${walls[dir].length} / ${expected})`);
+          continue;
+        }
+        hasexit = true;
+        const other = maps[map.exits[dir]];
+        if (!other) {
+          console.error(`Map ${map.name} exit ${dir} has invalid destination ${map.exits[dir]}`);
+          continue;
+        }
+        let a = [];
+        let b = [];
+        switch (dir) {
+          case 'up':
+            if (other.exits.down !== map.name) {
+              console.error(`Map ${map.name} exit ${dir} has invalid return map ${other.exits.down}`);
+              continue;
+            }
+            a = walls.up;
+            b = other.getWall('down');
+            break;
+          case 'down':
+            if (other.exits.up !== map.name) {
+              console.error(`Map ${map.name} exit ${dir} has invalid return map ${other.exits.up}`);
+              continue;
+            }
+            a = walls.down;
+            b = other.getWall('up');
+            break;
+          case 'left':
+            if (other.exits.right !== map.name) {
+              console.error(`Map ${map.name} exit ${dir} has invalid return map ${other.exits.right}`);
+              continue;
+            }
+            a = walls.left;
+            b = other.getWall('right');
+            break;
+          case 'right':
+            if (other.exits.left !== map.name) {
+              console.error(`Map ${map.name} exit ${dir} has invalid return map ${other.exits.left}`);
+              continue;
+            }
+            a = walls.right;
+            b = other.getWall('left');
+            break;
+        }
+        if (dir === 'up' || dir === 'down') {
+          a = _.map(a, (s: Sprite) => s.pos.x);
+          b = _.map(b, (s: Sprite) => s.pos.x);
+        } else {
+          a = _.map(a, (s: Sprite) => s.pos.y);
+          b = _.map(b, (s: Sprite) => s.pos.y);
+        }
+        a.sort();
+        b.sort();
+        if (!_.isEqual(a, b)) {
+          console.error(`Map ${map.name} exit ${dir} does not have matching exits in ${other.name}`);
+          continue;
+        }
+      }
+      if (!hasexit) {
+        console.error(`Map ${map.name} is disconnected from all others`);
+      }
+    }
   }
 }

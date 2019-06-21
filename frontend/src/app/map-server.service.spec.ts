@@ -24,7 +24,6 @@ describe('MapServerService', () => {
             exits: {
               up: 'test-1',
             },
-            sprites: ['a'],
             playerStart: {
               x: 10,
               y: 20,
@@ -36,7 +35,6 @@ describe('MapServerService', () => {
     spyOn(window, 'fetch').and.returnValue(Promise.resolve(res));
     const map = await service.load('test');
     expect(map.name).toEqual('test');
-    expect(map.sprites).toEqual(['a']);
     expect(map.exits.up).toEqual('test-1');
     expect(map.playerStart.x).toEqual(10);
     expect(map.playerStart.y).toEqual(20);
