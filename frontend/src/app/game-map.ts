@@ -31,9 +31,7 @@ export class GameMap {
 
   sortSprites() {
     this.sprites = _.sortBy(this.sprites, (a: any, b: any): number => {
-      if (a.type === sprites.Sprites.Wall || a.type === sprites.Sprites.OptionWall) {
-        return 1;
-      }
+      if (a.type === sprites.Sprites.Wall || a.type === sprites.Sprites.OptionWall) return 1;
       return 0;
     });
   }
@@ -49,10 +47,7 @@ export function loadMap(name: string): Promise<GameMap> {
         return response.json();
       })
       .then((json) => {
-        if (!json || !json.map || json.status !== 'OK') {
-          console.log('Error loading map', json);
-          return new GameMap();
-        }
+        if (!json || !json.map || json.status !== 'OK') throw new Error(`Error loading map: ${json}`);
         return new GameMap(JSON.parse(json.map));
       });
 }

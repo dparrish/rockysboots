@@ -2,7 +2,7 @@ import {AfterViewInit, Component} from '@angular/core';
 import * as _ from 'lodash';
 
 import {environment} from '../../environments/environment';
-import {constants} from '../constants/constants.module';
+import {blockSize, constants, formatText, sizeX, sizeY} from '../constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from '../event';
 import {GameMap, loadMap} from '../game-map';
 import {Point} from '../position';
@@ -18,8 +18,8 @@ const directions = ['up', 'down', 'left', 'right'];
 })
 export class EditorComponent implements AfterViewInit {
   canvas: HTMLCanvasElement;
-  canvasWidth = constants.sizeX * constants.blockSize;
-  canvasHeight = constants.sizeY * constants.blockSize;
+  canvasWidth = sizeX * blockSize;
+  canvasHeight = sizeY * blockSize;
   map: GameMap = new GameMap();
   pointer = {
     x: 0,
@@ -50,9 +50,7 @@ export class EditorComponent implements AfterViewInit {
   ngAfterViewInit() {
     setTimeout(async () => {
       window.addEventListener('selectstart', (event) => {
-        if ((event.target as HTMLInputElement).type === 'text') {
-          return;
-        }
+        if ((event.target as HTMLInputElement).type === 'text') return;
         event.preventDefault();
       });
 
@@ -91,17 +89,15 @@ export class EditorComponent implements AfterViewInit {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'black';
     ctx.strokeStyle = 'black';
-    ctx.fillRect(0, 0, constants.sizeX * constants.blockSize, constants.sizeY * constants.blockSize);
+    ctx.fillRect(0, 0, sizeX * blockSize, sizeY * blockSize);
 
     // Draw grid overlay.
     if (constants.inEditor && this.drawGrid) {
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'grey';
-      for (let x = 0; x < constants.sizeX; x++) {
-        for (let y = 0; y < constants.sizeY; y++) {
-          ctx.strokeRect(
-              x * constants.blockSize, y * constants.blockSize, (x + 1) * constants.blockSize,
-              (y + 1) * constants.blockSize);
+      for (let x = 0; x < sizeX; x++) {
+        for (let y = 0; y < sizeY; y++) {
+          ctx.strokeRect(x * blockSize, y * blockSize, (x + 1) * blockSize, (y + 1) * blockSize);
         }
       }
     }
@@ -112,24 +108,16 @@ export class EditorComponent implements AfterViewInit {
     }
 
     // Draw new sprite if mouse is down.
-    if (this.pointer.down && this.tempSprite) {
-      this.tempSprite.draw(ctx);
-    }
+    if (this.pointer.down && this.tempSprite) this.tempSprite.draw(ctx);
 
     // Draw player
-    if (!this.pointer.down || (this.pointer.down && this.currentSprite !== Sprites.Player)) {
-      this.playerSprite.draw(ctx);
-    }
+    if (!this.pointer.down || (this.pointer.down && this.currentSprite !== Sprites.Player)) this.playerSprite.draw(ctx);
   }
 
   snapPointer() {
-    const ss = this.moveSnap ? constants.blockSize : snapSize;
-    if (this.pointer.x % constants.blockSize !== 0) {
-      this.pointer.x = Math.floor(this.pointer.x / ss) * ss;
-    }
-    if (this.pointer.y % constants.blockSize !== 0) {
-      this.pointer.y = Math.floor(this.pointer.y / ss) * ss;
-    }
+    const ss = this.moveSnap ? blockSize : snapSize;
+    if (this.pointer.x % blockSize !== 0) this.pointer.x = Math.floor(this.pointer.x / ss) * ss;
+    if (this.pointer.y % blockSize !== 0) this.pointer.y = Math.floor(this.pointer.y / ss) * ss;
   }
 
   selectColour(colour: string) {
@@ -173,9 +161,8 @@ export class EditorComponent implements AfterViewInit {
       type: this.currentSprite,
       colour: this.currentColour,
       powered: this.currentPowered,
-      text: constants.formatText(this.currentText),
+      text: formatText(this.currentText),
     });
-
     event.cancelBubble = true;
     this.drawMap();
   }
@@ -199,11 +186,7 @@ export class EditorComponent implements AfterViewInit {
   }
 
   mouseEnter(event: any) {
-    if (event.buttons === 1) {
-      this.pointer.down = true;
-    } else {
-      this.pointer.down = false;
-    }
+    this.pointer.down = event.buttons === 1;
     this.drawMap();
   }
 
@@ -251,12 +234,9 @@ export class EditorComponent implements AfterViewInit {
         x: this.map.playerStart.x,
         y: this.map.playerStart.y,
       });
-      this.updateExitsTicks();
       return map;
     });
   }
-
-  updateExitsTicks() {}
 
   async gameTick() {
     await this.eventLoop.tick();
@@ -264,22 +244,16 @@ export class EditorComponent implements AfterViewInit {
   }
 
   getWall(direction: string): Sprite[] {
-    function isWall(s: Sprite): boolean {
-      return s.type === Sprites.Wall || s.type === Sprites.OptionWall;
-    }
+    const isWall = (s: Sprite) => s.type === Sprites.Wall || s.type === Sprites.OptionWall;
     switch (direction) {
       case 'up':
         return _.filter(this.map.sprites, (s: Sprite) => s.pos.y === 0 && isWall(s));
       case 'down':
-        return _.filter(
-            this.map.sprites, (s: Sprite) => s.pos.y === (constants.sizeY - 1) * constants.blockSize && isWall(s));
+        return _.filter(this.map.sprites, (s: Sprite) => s.pos.y === (sizeY - 1) * blockSize && isWall(s));
       case 'left':
         return _.filter(this.map.sprites, (s: Sprite) => s.pos.x === 0 && isWall(s));
       case 'right':
-        return _.filter(
-            this.map.sprites, (s: Sprite) => s.pos.x === (constants.sizeX - 1) * constants.blockSize && isWall(s));
-      default:
-        return null;
+        return _.filter(this.map.sprites, (s: Sprite) => s.pos.x === (sizeX - 1) * blockSize && isWall(s));
     }
   }
 
@@ -287,76 +261,56 @@ export class EditorComponent implements AfterViewInit {
     const sprites: Sprite[] = [];
     switch (direction) {
       case 'up':
-        for (let i = 0; i < constants.sizeX; i++) {
+        for (let i = 0; i < sizeX; i++) {
           sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
-            x: i * constants.blockSize,
+            x: i * blockSize,
             y: 0,
           }));
         }
         break;
       case 'down':
-        for (let i = 0; i < constants.sizeX; i++) {
+        for (let i = 0; i < sizeX; i++) {
           sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
-            x: i * constants.blockSize,
-            y: (constants.sizeY - 1) * constants.blockSize,
+            x: i * blockSize,
+            y: (sizeY - 1) * blockSize,
           }));
         }
         break;
       case 'left':
-        for (let i = 0; i < constants.sizeY; i++) {
+        for (let i = 0; i < sizeY; i++) {
           sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
             x: 0,
-            y: i * constants.blockSize,
+            y: i * blockSize,
           }));
         }
         break;
       case 'right':
-        for (let i = 0; i < constants.sizeY; i++) {
+        for (let i = 0; i < sizeY; i++) {
           sprites.push(newSprite(this.map, {
             colour: 'blue',
             type: Sprites.Wall,
-            x: (constants.sizeX - 1) * constants.blockSize,
-            y: i * constants.blockSize,
+            x: (sizeX - 1) * blockSize,
+            y: i * blockSize,
           }));
         }
-        break;
-      default:
         break;
     }
     return sprites;
   }
 
-  validExits(): Promise<any> {
-    if (this.map.name === 'sprite-test') {
-      return Promise.resolve(true);
-    }
-    let wall = this.getWall('up');
-    if (wall.length !== constants.sizeX && !this.map.exits.up) {
-      console.log(wall);
-      return Promise.reject('exit-up invalid');
-    }
-    wall = this.getWall('down');
-    if (wall.length !== constants.sizeX && !this.map.exits.down) {
-      console.log(wall);
-      return Promise.reject('exit-down invalid');
-    }
-    wall = this.getWall('left');
-    if (wall.length !== constants.sizeY && !this.map.exits.left) {
-      console.log(wall);
-      return Promise.reject('exit-left invalid');
-    }
-    wall = this.getWall('right');
-    if (wall.length !== constants.sizeY && !this.map.exits.right) {
-      console.log(wall);
-      return Promise.reject('exit-right invalid');
-    }
-    return Promise.resolve(true);
+  async validExits() {
+    if (this.map.name === 'sprite-test') return;
+    if (this.getWall('up').length !== sizeX && !this.map.exits.up) throw new Error('exit-up invalid');
+    if (this.getWall('down').length !== sizeX && !this.map.exits.down) throw new Error('exit-down invalid');
+    if (this.getWall('left').length !== sizeY && !this.map.exits.left) throw new Error('exit-left invalid');
+    if (this.getWall('right').length !== sizeY && !this.map.exits.right) throw new Error('exit-right invalid');
+    return;
   }
 
   buildJson(map: GameMap): any {
@@ -372,19 +326,14 @@ export class EditorComponent implements AfterViewInit {
     return json;
   }
 
-  async saveMap(map: GameMap, forceInvalidExits = false): Promise<any> {
-    if (map.name === '') {
-      throw new Error('Invalid map name');
-    }
-    this.currentJson = JSON.stringify(this.buildJson(map), null, 2);
-
+  async saveMap(map: GameMap, forceInvalidExits = false) {
     try {
-      if (!forceInvalidExits) {
-        await this.validExits();
-      }
+      if (map.name === '') throw new Error('Invalid map name');
+      this.currentJson = JSON.stringify(this.buildJson(map), null, 2);
+      if (!forceInvalidExits) await this.validExits();
     } catch (e) {
       alert(e);
-      return Promise.resolve(false);
+      return;
     }
 
     console.log(`Saving map ${map.name}`);
@@ -403,94 +352,77 @@ export class EditorComponent implements AfterViewInit {
           this.mapList = _.uniqBy(this.mapList);
           this.mapList = this.mapList.sort();
           this.updateMapList();
-          const promises: Promise<any>[] = [];
-
-          // Create adjoining maps if they don't yet exist.
-          if (map.exits.up) {
-            if (this.mapList.indexOf(map.exits.up) < 0) {
-              const wall = this.getWall('up');
-              const newMap = new GameMap({
-                name: map.exits.up,
-                exits: {
-                  down: map.name,
-                },
-                sprites: this.buildWall('up').concat(this.buildWall('left')).concat(this.buildWall('right')),
-                playerStart: {x: 2 * constants.blockSize, y: 2 * constants.blockSize},
-              });
-              for (const s of wall) {
-                newMap.sprites.push({
-                  type: Sprites.Wall,
-                  pos: new Point(s.pos.x, (constants.sizeY - 1) * constants.blockSize),
-                });
-              }
-              // console.log(`Creating map ${map.exits.up} up`, newMap);
-              promises.push(this.saveMap(newMap, true));
-            }
-          }
-          if (map.exits.down) {
-            if (this.mapList.indexOf(map.exits.down) < 0) {
-              const wall = this.getWall('down');
-              const newMap = new GameMap({
-                name: map.exits.down,
-                exits: {
-                  up: map.name,
-                },
-                sprites: this.buildWall('down').concat(this.buildWall('left')).concat(this.buildWall('right')),
-                playerStart: {x: 2 * constants.blockSize, y: 2 * constants.blockSize},
-              });
-              for (const s of wall) {
-                newMap.sprites.push({
-                  type: Sprites.Wall,
-                  pos: new Point(s.pos.x, 0),
-                });
-              }
-              // console.log(`Creating map ${map.exits.down} down`, newMap);
-              promises.push(this.saveMap(newMap, true));
-            }
-          }
-          if (map.exits.left) {
-            if (this.mapList.indexOf(map.exits.left) < 0) {
-              const wall = this.getWall('left');
-              const newMap = new GameMap({
-                name: map.exits.left,
-                exits: {
-                  right: map.name,
-                },
-                sprites: this.buildWall('up').concat(this.buildWall('down')).concat(this.buildWall('left')),
-                playerStart: {x: 2 * constants.blockSize, y: 2 * constants.blockSize},
-              });
-              for (const s of wall) {
-                newMap.sprites.push({
-                  type: Sprites.Wall,
-                  pos: new Point((constants.sizeX - 1) * constants.blockSize, s.pos.y),
-                });
-              }
-              // console.log(`Creating map ${map.exits.left} left`, newMap);
-              promises.push(this.saveMap(newMap, true));
-            }
-          }
-          if (map.exits.right) {
-            if (this.mapList.indexOf(map.exits.right) < 0) {
-              const wall = this.getWall('right');
-              const newMap = new GameMap({
-                name: map.exits.right,
-                exits: {
-                  left: map.name,
-                },
-                sprites: this.buildWall('up').concat(this.buildWall('down')).concat(this.buildWall('right')),
-                playerStart: {x: 2 * constants.blockSize, y: 2 * constants.blockSize},
-              });
-              for (const s of wall) {
-                newMap.sprites.push({
-                  type: Sprites.Wall,
-                  pos: new Point(0, s.pos.y),
-                });
-              }
-              // console.log(`Creating map ${map.exits.right} right`, newMap);
-              promises.push(this.saveMap(newMap, true));
-            }
-          }
-          return Promise.all(promises);
+          return this.buildOppositeExits(map);
         });
+  }
+
+  async buildOppositeExits(map: GameMap) {
+    const promises: Promise<any>[] = [];
+    // Create adjoining maps if they don't yet exist.
+    if (map.exits.up && this.mapList.indexOf(map.exits.up) < 0) {
+      const wall = this.getWall('up');
+      const newMap = new GameMap({
+        name: map.exits.up,
+        exits: {down: map.name},
+        sprites: this.buildWall('up').concat(this.buildWall('left')).concat(this.buildWall('right')),
+        playerStart: {x: 2 * blockSize, y: 2 * blockSize},
+      });
+      for (const s of wall) {
+        newMap.sprites.push({
+          type: Sprites.Wall,
+          pos: new Point(s.pos.x, (sizeY - 1) * blockSize),
+        });
+      }
+      promises.push(this.saveMap(newMap, true));
+    }
+    if (map.exits.down && this.mapList.indexOf(map.exits.down) < 0) {
+      const wall = this.getWall('down');
+      const newMap = new GameMap({
+        name: map.exits.down,
+        exits: {up: map.name},
+        sprites: this.buildWall('down').concat(this.buildWall('left')).concat(this.buildWall('right')),
+        playerStart: {x: 2 * blockSize, y: 2 * blockSize},
+      });
+      for (const s of wall) {
+        newMap.sprites.push({
+          type: Sprites.Wall,
+          pos: new Point(s.pos.x, 0),
+        });
+      }
+      promises.push(this.saveMap(newMap, true));
+    }
+    if (map.exits.left && this.mapList.indexOf(map.exits.left) < 0) {
+      const wall = this.getWall('left');
+      const newMap = new GameMap({
+        name: map.exits.left,
+        exits: {right: map.name},
+        sprites: this.buildWall('up').concat(this.buildWall('down')).concat(this.buildWall('left')),
+        playerStart: {x: 2 * blockSize, y: 2 * blockSize},
+      });
+      for (const s of wall) {
+        newMap.sprites.push({
+          type: Sprites.Wall,
+          pos: new Point((sizeX - 1) * blockSize, s.pos.y),
+        });
+      }
+      promises.push(this.saveMap(newMap, true));
+    }
+    if (map.exits.right && this.mapList.indexOf(map.exits.right) < 0) {
+      const wall = this.getWall('right');
+      const newMap = new GameMap({
+        name: map.exits.right,
+        exits: {left: map.name},
+        sprites: this.buildWall('up').concat(this.buildWall('down')).concat(this.buildWall('right')),
+        playerStart: {x: 2 * blockSize, y: 2 * blockSize},
+      });
+      for (const s of wall) {
+        newMap.sprites.push({
+          type: Sprites.Wall,
+          pos: new Point(0, s.pos.y),
+        });
+      }
+      promises.push(this.saveMap(newMap, true));
+    }
+    return Promise.all(promises);
   }
 }

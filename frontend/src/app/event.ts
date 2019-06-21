@@ -43,26 +43,17 @@ export class EventLoop {
   tickQueue: Event[] = [];
   timeQueue: Event[] = [];
   sprites: Sprite[] = [];
-  insideTickCallbacks: InsideTickCallback[] = [];
 
   run(): Promise<any> {
     // Fire all the events that are currently ready right now.
     const promises: Promise<any>[] = [];
     const now = moment().valueOf();
-    while (this.timeQueue.length) {
-      const event = this.timeQueue[0];
-      if (event.when.time > now) {
-        break;
-      }
-      this.timeQueue.shift();
+    while (this.timeQueue.length && this.timeQueue[0].when.time <= now) {
+      const event = this.timeQueue.shift();
       event.eventLoop = this;
       promises.push(event.callback(event));
     }
     return Promise.all(promises);
-  }
-
-  inside(cb: InsideTickCallback) {
-    this.insideTickCallbacks.push(cb);
   }
 
   async tick(): Promise<any> {
@@ -71,39 +62,24 @@ export class EventLoop {
     this.currentTick++;
 
     // Update all sprites' internal state.
-    for (const sprite of this.sprites) {
-      sprite.tickStart(this);
-    }
+    _.map(this.sprites, (s: Sprite) => s.tickStart(this));
 
     // tickQueue
 
     // Fire all the events that are currently ready for the current tick.
-    let promises: Promise<any>[] = [];
-    while (this.tickQueue.length) {
-      const event = this.tickQueue[0];
-      if (event.when.tick > this.currentTick) {
-        break;
-      }
-      this.tickQueue.shift();
+    const promises: Promise<any>[] = [];
+    while (this.tickQueue.length && this.tickQueue[0].when.tick <= this.currentTick) {
+      const event = this.tickQueue.shift();
       event.eventLoop = this;
       event.tick = this.currentTick;
       promises.push(event.callback(event));
     }
     await Promise.all(promises);
 
-    // tickInside
-
-    promises = [];
-    for (const cb of this.insideTickCallbacks) {
-      promises.push(cb(this));
-    }
-    await Promise.all(promises);
 
     // tickEnd
 
-    for (const sprite of this.sprites) {
-      sprite.tickEnd(this);
-    }
+    _.map(this.sprites, (s: Sprite) => s.tickEnd(this));
 
     // tickWait
   }

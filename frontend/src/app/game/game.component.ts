@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import * as moment from 'moment';
 
 import {environment} from '../../environments/environment';
-import {constants} from '../constants/constants.module';
+import {blockSize, sizeX, sizeY} from '../constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from '../event';
 import {GameMap, loadMap} from '../game-map';
 import {BoundingBox, Point} from '../position';
@@ -12,8 +12,8 @@ import {newSprite, Player, Sprite, Sprites, spritesWithInputAt} from '../sprites
 @Component({selector: 'app-game', templateUrl: './game.component.html', styleUrls: ['./game.component.css']})
 export class GameComponent implements AfterViewInit {
   canvas: HTMLCanvasElement;
-  canvasWidth = constants.sizeX * constants.blockSize;
-  canvasHeight = constants.sizeY * constants.blockSize;
+  canvasWidth = sizeX * blockSize;
+  canvasHeight = sizeY * blockSize;
   map: GameMap = new GameMap();
   maps: {[name: string]: GameMap} = {};
   player: Player = null;
@@ -84,7 +84,7 @@ export class GameComponent implements AfterViewInit {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'black';
     ctx.strokeStyle = 'black';
-    ctx.fillRect(0, 0, constants.sizeX * constants.blockSize, constants.sizeY * constants.blockSize);
+    ctx.fillRect(0, 0, sizeX * blockSize, sizeY * blockSize);
 
     // Draw existing sprites.
     for (const s of this.map.sprites) {
@@ -100,16 +100,16 @@ export class GameComponent implements AfterViewInit {
   }
 
   async gameTick() {
-    // console.log(`Game tick ${this.eventLoop.currentTick}`);
-    // Wait for all events to fire continuing.
-    await this.eventLoop.tick();
-
     // Check for sprites that the player is powering.
     for (const s of spritesWithInputAt(this.player.boundingbox, this.map.sprites)) {
-      console.log(`Player powering`, s);
-      s.power(this.eventLoop);
+      // console.log(`Player powering`, s);
+      this.eventLoop.queue(atTick(this.eventLoop.currentTick + 1), async (event: Event) => {
+        s.power(this.eventLoop);
+      });
     }
 
+    // Wait for all events to fire continuing.
+    await this.eventLoop.tick();
     this.drawMap();
   }
 
@@ -122,7 +122,7 @@ export class GameComponent implements AfterViewInit {
   }
 
   async keyDown(event) {
-    const distance = this.modifiers.shift ? 10 : constants.blockSize;
+    const distance = this.modifiers.shift ? 10 : blockSize;
     const newPlayer = new Player().fromJson(this.player.toJson());
     let move: Point = null;
     switch (event.code) {
@@ -164,22 +164,22 @@ export class GameComponent implements AfterViewInit {
       if (this.carrying) this.carrying.pos = this.carrying.pos.add(move);
     }
 
-    if (this.map.exits.right && this.player.pos.x + constants.blockSize - 1 >= constants.sizeX * constants.blockSize) {
+    if (this.map.exits.right && this.player.pos.x + blockSize - 1 >= sizeX * blockSize) {
       // Moved to the right.
       const oldMap = this.map;
       return this.loadMap(this.map.exits.right).then((map: GameMap) => {
         this.player.pos.x = 0;
         this.player.pos.y = newPlayer.pos.y;
-        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
+        if (this.carrying) this.moveSpriteToMap(this.carrying, oldMap, this.player.pos.sub(this.carryDiff));
       });
     }
     if (this.map.exits.left && this.player.pos.x < 0) {
       // Moved to the left.
       const oldMap = this.map;
       return this.loadMap(this.map.exits.left).then((map: GameMap) => {
-        this.player.pos.x = (constants.sizeX - 1) * constants.blockSize;
+        this.player.pos.x = (sizeX - 1) * blockSize;
         this.player.pos.y = newPlayer.pos.y;
-        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
+        if (this.carrying) this.moveSpriteToMap(this.carrying, oldMap, this.player.pos.sub(this.carryDiff));
       });
     }
     if (this.map.exits.up && this.player.pos.y < 0) {
@@ -187,64 +187,46 @@ export class GameComponent implements AfterViewInit {
       const oldMap = this.map;
       return this.loadMap(this.map.exits.up).then((map: GameMap) => {
         this.player.pos.x = newPlayer.pos.x;
-        this.player.pos.y = (constants.sizeY - 1) * constants.blockSize;
-        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
+        this.player.pos.y = (sizeY - 1) * blockSize;
+        if (this.carrying) this.moveSpriteToMap(this.carrying, oldMap, this.player.pos.sub(this.carryDiff));
       });
     }
-    if (this.map.exits.down && this.player.pos.y + constants.blockSize - 1 >= constants.sizeY * constants.blockSize) {
+    if (this.map.exits.down && this.player.pos.y + blockSize - 1 >= sizeY * blockSize) {
       // Moved to the bottom.
       const oldMap = this.map;
       return this.loadMap(this.map.exits.down).then((map: GameMap) => {
         this.player.pos.x = newPlayer.pos.x;
         this.player.pos.y = 0;
-        if (this.carrying) moveSpriteToMap(this.carrying, oldMap, this.map, this.player.pos.sub(this.carryDiff));
+        if (this.carrying) this.moveSpriteToMap(this.carrying, oldMap, this.player.pos.sub(this.carryDiff));
       });
     }
 
     this.drawMap();
   }
 
+
+  moveSpriteToMap(sprite: Sprite, from: GameMap, pos: Point) {
+    _.remove(from.sprites, (s: Sprite) => s === sprite);
+    this.map.sprites.push(sprite);
+    sprite.pos = pos;
+    sprite.map = this.map;
+  }
+
   keyUp(event) {
-    switch (event.code) {
-      case 'ShiftLeft':
-      case 'ShiftRight':
-        this.modifiers.shift = false;
-        break;
-      default:
-        // console.log('keyUp', event);
-        break;
-    }
+    if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') this.modifiers.shift = false;
   }
 
   handlePickup() {
     if (this.carrying) {
       // Drop sprite.
       this.carrying = null;
-    } else {
-      // Pick up sprite.
-      for (const s of _.filter(
-               this.map.sprites, (s: Sprite) => !s.fixed && s.boundingbox.intersects(this.player.boundingbox))) {
-        this.carrying = s;
-        this.carryDiff = this.player.pos.sub(s.pos);
-      }
+      return;
+    }
+    // Pick up sprite.
+    for (const s of _.filter(
+             this.map.sprites, (s: Sprite) => !s.fixed && s.boundingbox.intersects(this.player.boundingbox))) {
+      this.carrying = s;
+      this.carryDiff = this.player.pos.sub(s.pos);
     }
   }
-
-  mouseLeave(event) {}
-
-  mouseEnter(event) {}
-
-  pointerUp(event) {}
-
-  pointerDown(event) {}
-
-  mouseMove(event) {}
 }
-
-function moveSpriteToMap(sprite: Sprite, from: GameMap, to: GameMap, pos: Point) {
-  _.remove(from.sprites, (s: Sprite) => s === sprite);
-  to.sprites.push(sprite);
-  sprite.pos = pos;
-  sprite.map = to;
-}
-

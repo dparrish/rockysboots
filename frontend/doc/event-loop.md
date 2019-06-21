@@ -15,11 +15,6 @@ counter is updated before calling each sprite.
 All events that have been added to the event loop using `EventLoop.queue(atTick())` are called here, once only. Each
 event must return a `Promise<any>`, which will be awaited before continuing with the next state.
 
-### tickInside
-
-This is uesd internally by the event loop. Callbacks added using `EventLoop.inside()` are called every tick, and must
-return a `Promise<any>`, which will be awaited before continung with the next state.
-
 ### tickEnd
 
 This is the end of each tick. Every sprite's `tickEnd()` method is called in a random order.
