@@ -47,7 +47,7 @@ export enum Sprites {
   Sign,
 }
 
-const jsonFields = ['type', 'text', 'colour', 'powered', 'fixed'];
+const jsonFields = ['type', 'text', 'colour', 'powered', 'fixed', 'forcePowered'];
 
 export class Sprite {
   type: Sprites;
@@ -57,6 +57,7 @@ export class Sprite {
   fixed: boolean = false;
   passable: boolean = true;
   map: GameMap = null;
+  forcePowered: boolean = false;
 
   powerable: boolean = false;
   powered: boolean = false;
@@ -68,6 +69,7 @@ export class Sprite {
 
   constructor(json?: any) {
     if (json) this.fromJson(json);
+    if (this.forcePowered) this.powered = true;
   }
 
   get name(): string {
@@ -190,6 +192,7 @@ export class Sprite {
   // Called at the start of every game tick, now is the time to update the internal state.
   tickStart(eventLoop: EventLoop) {
     this.powered = false;
+    if (this.forcePowered) this.powered = true;
   }
 
   // Called at the end of every game tick, now is the time to update the internal state.

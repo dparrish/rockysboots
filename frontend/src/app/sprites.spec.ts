@@ -556,6 +556,62 @@ describe('Invidivual Sprites', () => {
       expect(clockPowered).toEqual(2);
     });
   });
+
+  describe('of type Bird', () => {
+    let sprite: Sprite;
+
+    beforeEach(async () => {
+      sprite = newSprite(map, {type: Sprites.Bird, x: 0, y: 0, colour: '0'});
+      eventLoop.sprites.push(sprite);
+    });
+
+    it('should have a valid bounding box', () => {
+      expect(sprite.boundingbox.width).toBeGreaterThan(0);
+      expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+  });
+
+  describe('of type Poop', () => {
+    let sprite: Sprite;
+
+    beforeEach(async () => {
+      sprite = newSprite(map, {type: Sprites.Poop, x: 0, y: 0, colour: '0'});
+      eventLoop.sprites.push(sprite);
+    });
+
+    it('should have a valid bounding box', () => {
+      expect(sprite.boundingbox.width).toBeGreaterThan(0);
+      expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+  });
+
+  describe('of type Sensor', () => {
+    let sprite: Sprite;
+
+    beforeEach(async () => {
+      sprite = newSprite(map, {type: Sprites.Sensor, x: 0, y: 0, colour: '0'});
+      eventLoop.sprites.push(sprite);
+    });
+
+    it('should have a valid bounding box', () => {
+      expect(sprite.boundingbox.width).toBeGreaterThan(0);
+      expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+  });
+
+  describe('of type Sign', () => {
+    let sprite: Sprite;
+
+    beforeEach(async () => {
+      sprite = newSprite(map, {type: Sprites.Sign, x: 0, y: 0, colour: '0'});
+      eventLoop.sprites.push(sprite);
+    });
+
+    it('should have a valid bounding box', () => {
+      expect(sprite.boundingbox.width).toBeGreaterThan(0);
+      expect(sprite.boundingbox.height).toBeGreaterThan(0);
+    });
+  });
 });
 
 function injectPower(eventLoop: EventLoop, sprite: Sprite) {

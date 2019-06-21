@@ -145,7 +145,10 @@ export class EditorComponent implements AfterViewInit {
       this.playerSprite.pos.y = this.pointer.y;
       return;
     }
-    _.remove(this.map.sprites, (el: Sprite) => el.pos.x === this.pointer.x && el.pos.y === this.pointer.y);
+    _.remove(
+        this.map.sprites,
+        (el: Sprite) => el.pos.x === this.pointer.x && el.pos.y === this.pointer.y &&
+            (el.type === this.currentSprite || this.currentSprite === Sprites.Empty));
     this.map.sprites.push(this.tempSprite);
     this.map.sortSprites();
     this.tempSprite = null;
@@ -166,8 +169,9 @@ export class EditorComponent implements AfterViewInit {
       y: this.pointer.y,
       type: this.currentSprite,
       colour: this.currentColour,
-      powered: this.currentPowered,
       text: formatText(this.currentText),
+      powered: this.currentPowered,
+      forcePowered: this.currentPowered,
     });
     event.cancelBubble = true;
     this.drawMap();
