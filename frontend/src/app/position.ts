@@ -17,6 +17,10 @@ export class Point {
     }
   }
 
+  equals(pos: Point) {
+    return pos.x === this.x && pos.y === this.y;
+  }
+
   toString(): string {
     return `${this.x},${this.y}`;
   }

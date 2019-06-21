@@ -14,6 +14,10 @@ const wallSprite = new Image();
 wallSprite.src = '../assets/wall.png';
 const bootSprite = new Image();
 bootSprite.src = '../assets/boot.png';
+const birdSprite = new Image();
+birdSprite.src = '../assets/bird.png';
+const poopSprite = new Image();
+poopSprite.src = '../assets/poop.png';
 
 const h = blockSize / 2;
 
@@ -37,6 +41,10 @@ export enum Sprites {
   ConnectorDown,
   OptionWall,
   Clock,
+  Bird,
+  Poop,
+  Sensor,
+  Sign,
 }
 
 export class Sprite {
@@ -513,12 +521,21 @@ export class Clacker extends Sprite {
 
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-    if (constants.inEditor) {
-      ctx.textBaseline = 'top';
-      ctx.font = '10px Apple';
+    ctx.textBaseline = 'top';
+    ctx.font = '10px Apple';
+    if (this.powered) {
       ctx.fillText('CLKU', this.pos.x + 3, this.pos.y + 15);
+    } else {
+      ctx.fillText('CLKD', this.pos.x + 3, this.pos.y + 15);
     }
     super.finishDraw(ctx);
+  }
+
+  tickStart(eventLoop: EventLoop) {
+    super.tickStart(eventLoop);
+    if (this.map.name === 'sprite-test') {
+      this.powered = eventLoop.currentTick % 2 === 0;
+    }
   }
 }
 
@@ -698,6 +715,113 @@ export class Clock extends Sprite {
     this.powered = this.frame === 0;
   }
 }
+
+export class Bird extends Sprite {
+  private frame: number = 0;
+
+  constructor(json?: any) {
+    super(json);
+    this.type = Sprites.Bird;
+    this.powerable = false;
+    this.powered = false;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    super.draw(ctx);
+    ctx.drawImage(birdSprite, this.pos.x, this.pos.y);
+    super.finishDraw(ctx);
+  }
+
+  get boundingbox(): BoundingBox {
+    return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize);
+  }
+}
+
+export class Poop extends Sprite {
+  private frame: number = 0;
+
+  constructor(json?: any) {
+    super(json);
+    this.type = Sprites.Poop;
+    this.powerable = false;
+    this.powered = false;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    super.draw(ctx);
+    ctx.drawImage(poopSprite, this.pos.x, this.pos.y);
+    super.finishDraw(ctx);
+  }
+
+  get boundingbox(): BoundingBox {
+    return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize);
+  }
+}
+
+export class Sensor extends Sprite {
+  private frame: number = 0;
+
+  constructor(json?: any) {
+    super(json);
+    this.type = Sprites.Sensor;
+    this.powerable = true;
+    this.powered = false;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    super.draw(ctx);
+    ctx.drawImage(poopSprite, this.pos.x, this.pos.y);
+    super.finishDraw(ctx);
+  }
+
+  get boundingbox(): BoundingBox {
+    return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize);
+  }
+}
+
+export class Sign extends Sprite {
+  private frame: number = 0;
+
+  constructor(json?: any) {
+    super(json);
+    this.type = Sprites.Sign;
+    this.powerable = true;
+    this.powered = false;
+    this.inputs = [boundingbox(blockSize + 10, 10, 18, 18)];
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    super.draw(ctx);
+    ctx.textBaseline = 'top';
+    ctx.font = '10px Apple';
+    if (this.powered) {
+      ctx.fillText('ON', this.pos.x + 12 - blockSize, this.pos.y + 15);
+    } else {
+      ctx.fillText('OFF', this.pos.x + 8 - blockSize, this.pos.y + 15);
+    }
+    ctx.strokeStyle = this.colour;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(this.pos.x + 1 - blockSize, this.pos.y + 1, blockSize - 2, blockSize - 2);
+    ctx.moveTo(this.pos.x - 2, this.pos.y + h);
+    ctx.lineTo(this.pos.x + h, this.pos.y + h);
+    ctx.stroke();
+    connector(ctx, this.pos.x + h, this.pos.y + h, this.colour);
+
+    super.finishDraw(ctx);
+  }
+
+  tickStart(eventLoop: EventLoop) {
+    super.tickStart(eventLoop);
+    if (this.map.name === 'sprite-test') {
+      this.powered = eventLoop.currentTick % 2 === 0;
+    }
+  }
+
+  get boundingbox(): BoundingBox {
+    return boundingbox(this.pos.x - blockSize, this.pos.y, blockSize * 2, blockSize);
+  }
+}
+
 
 function connector(ctx: CanvasRenderingContext2D, x: number, y: number, colour: string) {
   ctx.save();
