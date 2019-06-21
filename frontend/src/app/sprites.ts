@@ -630,45 +630,29 @@ export class Clock extends Sprite {
     this.outputs = [boundingbox(10, blockSize + 10, 18, 18)];
   }
 
-  tickStart(eventLoop: EventLoop) {
-    this.frame = (this.frame + 1) % 8;
-    this.powered = this.frame === 0;
-  }
-
   draw(ctx: CanvasRenderingContext2D) {
     super.draw(ctx);
-
     const cx = this.pos.x + h;
     const cy = this.pos.y + h;
+
+    const hands = [
+      [cx, cy + blockSize],                                      // 6
+      [this.pos.x + 6, this.pos.y + blockSize - 6],              // 7:30
+      [this.pos.x, cy],                                          // 9
+      [this.pos.x + 6, this.pos.y + 6],                          // 10:30
+      [cx, this.pos.y],                                          // 12
+      [this.pos.x + blockSize - 6, this.pos.y + 6],              // 1:30
+      [this.pos.x + blockSize, cy],                              // 3
+      [this.pos.x + blockSize - 6, this.pos.y + blockSize - 6],  // 4:30
+    ];
 
     // Draw the hands greyed out.
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#333333';
-    // 6
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx, cy + blockSize);
-    // 7:30
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(this.pos.x + 6, this.pos.y + blockSize - 6);
-    // 9
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(this.pos.x, cy);
-    // 10:30
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(this.pos.x + 6, this.pos.y + 6);
-    // 12
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx, this.pos.y);
-    // 1:30
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + 6);
-    // 3
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(this.pos.x + blockSize, cy);
-    // 4:30
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + blockSize - 6);
-
+    for (const hand of hands) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(hand[0], hand[1]);
+    }
     ctx.stroke();
 
     // Draw the face.
@@ -685,41 +669,7 @@ export class Clock extends Sprite {
     ctx.moveTo(cx, cy);
     ctx.lineWidth = 2;
     ctx.strokeStyle = this.colour;
-
-    switch (this.frame) {
-      case 0:
-        // 6
-        ctx.lineTo(cx, cy + blockSize);
-        break;
-      case 1:
-        // 7:30
-        ctx.lineTo(this.pos.x + 6, this.pos.y + blockSize - 6);
-        break;
-      case 2:
-        // 9
-        ctx.lineTo(this.pos.x, cy);
-        break;
-      case 3:
-        // 10:30
-        ctx.lineTo(this.pos.x + 6, this.pos.y + 6);
-        break;
-      case 4:
-        // 12
-        ctx.lineTo(cx, this.pos.y);
-        break;
-      case 5:
-        // 1:30
-        ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + 6);
-        break;
-      case 6:
-        // 3
-        ctx.lineTo(this.pos.x + blockSize, cy);
-        break;
-      case 7:
-        // 4:30
-        ctx.lineTo(this.pos.x + blockSize - 6, this.pos.y + blockSize - 6);
-        break;
-    }
+    ctx.lineTo(hands[this.frame][0], hands[this.frame][1]);
     ctx.stroke();
 
     // Output
@@ -733,6 +683,11 @@ export class Clock extends Sprite {
 
   get boundingbox(): BoundingBox {
     return boundingbox(this.pos.x, this.pos.y, blockSize, blockSize * 2);
+  }
+
+  tickStart(eventLoop: EventLoop) {
+    this.frame = (this.frame + 1) % 8;
+    this.powered = this.frame === 0;
   }
 }
 
@@ -756,5 +711,5 @@ export function spritesWithInputAt(pos: BoundingBox, sprites: Sprite[]): Sprite[
       out.push(sprite);
     }
   }
-  return out;
+  return _.uniq(out);
 }
