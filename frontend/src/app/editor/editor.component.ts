@@ -1,10 +1,10 @@
 import {AfterViewInit, Component} from '@angular/core';
 import * as _ from 'lodash';
 
-import {environment} from '../../environments/environment';
 import {blockSize, constants, formatText, sizeX, sizeY} from '../constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from '../event';
-import {GameMap, loadMap} from '../game-map';
+import {GameMap} from '../game-map';
+import {MapServerService} from '../map-server.service';
 import {Point} from '../position';
 import {newSprite, Player, Sprite, Sprites} from '../sprites';
 
@@ -40,7 +40,7 @@ export class EditorComponent implements AfterViewInit {
   playerSprite: Player = null;
   tempSprite: Sprite = null;
 
-  constructor(private eventLoop: EventLoop) {
+  constructor(private eventLoop: EventLoop, private mapServer: MapServerService) {
     constants.inEditor = true;
     this.Sprites = Sprites;
     const sn = Object.keys(Sprites);
@@ -195,21 +195,13 @@ export class EditorComponent implements AfterViewInit {
   }
 
   loadMapList(): Promise<any> {
-    return fetch(`${environment.mapserverUrl}/maps`, {
-             cache: 'no-cache',
-             headers: {'Content-Type': 'application/json'},
-             redirect: 'follow',
-           })
-        .then((response: Response) => {
-          return response.json();
-        })
-        .then((json) => {
-          // console.log('Got maps list', json);
-          this.mapList = json.maps;
-          this.mapList.sort();
-          this.updateMapList();
-          return null;
-        });
+    return this.mapServer.list().then((json: any) => {
+      // console.log('Got maps list', json);
+      this.mapList = json.maps;
+      this.mapList.sort();
+      this.updateMapList();
+      return null;
+    });
   }
 
   updateMapList() {
@@ -227,7 +219,7 @@ export class EditorComponent implements AfterViewInit {
   }
 
   loadMap(name: string): Promise<any> {
-    return loadMap(name).then((map: GameMap) => {
+    return this.mapServer.load(name).then((map: GameMap) => {
       this.map = map;
       this.map.sprites = _.map(map.sprites, s => newSprite(this.map, s));
       this.playerSprite = new Player({
@@ -337,23 +329,13 @@ export class EditorComponent implements AfterViewInit {
     }
 
     console.log(`Saving map ${map.name}`);
-    return fetch(`${environment.mapserverUrl}/map/${map.name}`, {
-             method: 'PUT',
-             cache: 'no-cache',
-             headers: {'Content-Type': 'application/json'},
-             redirect: 'follow',
-             body: JSON.stringify(this.buildJson(map)),
-           })
-        .then((response: Response) => {
-          return response.json();
-        })
-        .then(async (json) => {
-          this.mapList.push(map.name);
-          this.mapList = _.uniqBy(this.mapList);
-          this.mapList = this.mapList.sort();
-          this.updateMapList();
-          return this.buildOppositeExits(map);
-        });
+    return this.mapServer.save(map.name, this.buildJson(map)).then((json: any) => {
+      this.mapList.push(map.name);
+      this.mapList = _.uniqBy(this.mapList);
+      this.mapList = this.mapList.sort();
+      this.updateMapList();
+      return this.buildOppositeExits(map);
+    });
   }
 
   async buildOppositeExits(map: GameMap) {

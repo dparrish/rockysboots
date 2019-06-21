@@ -1,11 +1,8 @@
 import * as _ from 'lodash';
 
-import {environment} from '../environments/environment';
-
-import {constants} from './constants/constants.module';
+import {blockSize} from './constants/constants.module';
+import {MapServerService} from './map-server.service';
 import * as sprites from './sprites';
-
-const blockSize = constants.blockSize;
 
 export class GameMap {
   exits = {
@@ -35,19 +32,4 @@ export class GameMap {
       return 0;
     });
   }
-}
-
-export function loadMap(name: string): Promise<GameMap> {
-  return fetch(`${environment.mapserverUrl}/map/${name}`, {
-           cache: 'no-cache',
-           headers: {'Content-Type': 'application/json'},
-           redirect: 'follow',
-         })
-      .then((response: Response) => {
-        return response.json();
-      })
-      .then((json) => {
-        if (!json || !json.map || json.status !== 'OK') throw new Error(`Error loading map: ${json}`);
-        return new GameMap(JSON.parse(json.map));
-      });
 }

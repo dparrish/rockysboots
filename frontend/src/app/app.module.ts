@@ -8,6 +8,7 @@ import {AppComponent} from './app.component';
 import {EditorComponent} from './editor/editor.component';
 import {EventLoop} from './event';
 import {GameComponent} from './game/game.component';
+import {MapServerService} from './map-server.service';
 
 @NgModule({
   declarations: [
@@ -23,6 +24,7 @@ import {GameComponent} from './game/game.component';
   ],
   providers: [
     EventLoop,
+    MapServerService,
   ],
   bootstrap: [AppComponent]
 })

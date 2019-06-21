@@ -5,7 +5,8 @@ import * as moment from 'moment';
 import {environment} from '../../environments/environment';
 import {blockSize, sizeX, sizeY} from '../constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from '../event';
-import {GameMap, loadMap} from '../game-map';
+import {GameMap} from '../game-map';
+import {MapServerService} from '../map-server.service';
 import {BoundingBox, Point} from '../position';
 import {newSprite, Player, Sprite, Sprites, spritesWithInputAt} from '../sprites';
 
@@ -25,7 +26,7 @@ export class GameComponent implements AfterViewInit {
   carrying: Sprite = null;
   carryDiff: Point = null;
 
-  constructor(private eventLoop: EventLoop) {}
+  constructor(private eventLoop: EventLoop, private mapServer: MapServerService) {}
 
   ngAfterViewInit() {
     setTimeout(async () => {
@@ -57,7 +58,7 @@ export class GameComponent implements AfterViewInit {
       this.drawMap();
       return Promise.resolve(this.map);
     }
-    return loadMap(name).then((map: GameMap) => {
+    return this.mapServer.load(name).then((map: GameMap) => {
       console.log(`Loaded map ${name}`);
       this.map = map;
       this.map.sprites = _.map(map.sprites, s => {
