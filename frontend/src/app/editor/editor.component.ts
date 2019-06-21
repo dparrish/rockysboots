@@ -1,6 +1,7 @@
 import {AfterViewInit, Component} from '@angular/core';
 import * as _ from 'lodash';
 
+import {environment} from '../../environments/environment';
 import {blockSize, constants, formatText, sizeX, sizeY} from '../constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from '../event';
 import {GameMap} from '../game-map';
@@ -36,7 +37,7 @@ export class EditorComponent implements AfterViewInit {
   mapList: string[] = [];
   Sprites: any;
   spriteNames: string[] = [];
-  drawGrid: boolean = false;
+  drawGrid: boolean = environment.editor.drawGrid;
   playerSprite: Player = null;
   tempSprite: Sprite = null;
 
@@ -115,7 +116,7 @@ export class EditorComponent implements AfterViewInit {
   }
 
   snapPointer() {
-    const ss = this.moveSnap ? blockSize : snapSize;
+    const ss = this.moveSnap ? snapSize : blockSize;
     if (this.pointer.x % blockSize !== 0) this.pointer.x = Math.floor(this.pointer.x / ss) * ss;
     if (this.pointer.y % blockSize !== 0) this.pointer.y = Math.floor(this.pointer.y / ss) * ss;
   }

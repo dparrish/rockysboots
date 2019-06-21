@@ -1,5 +1,7 @@
 import * as _ from 'lodash';
 
+import {environment} from '../environments/environment';
+
 import {blockSize, constants} from './constants/constants.module';
 import {afterMs, atTick, Event, EventLoop} from './event';
 import {GameMap} from './game-map';
@@ -116,24 +118,30 @@ export class Sprite {
     ctx.restore();
     if (constants.inEditor) {
       // Draw bounding box.
-      ctx.save();
-      ctx.strokeStyle = 'darkgray';
-      const bb = this.boundingbox;
-      ctx.strokeRect(bb.topleft.x, bb.topleft.y, bb.width, bb.height);
-      ctx.restore();
+      if (environment.editor.drawOutlines) {
+        ctx.save();
+        ctx.strokeStyle = 'darkgray';
+        const bb = this.boundingbox;
+        ctx.strokeRect(bb.topleft.x, bb.topleft.y, bb.width, bb.height);
+        ctx.restore();
+      }
 
       // Draw inputs.
-      for (const input of this.inputs) {
-        ctx.strokeStyle = 'blue';
-        ctx.lineWidth = 1;
-        input.relativeTo(this.boundingbox).draw(ctx);
+      if (environment.editor.drawInputs) {
+        for (const input of this.inputs) {
+          ctx.strokeStyle = 'blue';
+          ctx.lineWidth = 1;
+          input.relativeTo(this.boundingbox).draw(ctx);
+        }
       }
 
       // Draw outputs.
-      for (const output of this.outputs) {
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 1;
-        output.relativeTo(this.boundingbox).draw(ctx);
+      if (environment.editor.drawOutputs) {
+        for (const output of this.outputs) {
+          ctx.strokeStyle = 'red';
+          ctx.lineWidth = 1;
+          output.relativeTo(this.boundingbox).draw(ctx);
+        }
       }
     }
   }
