@@ -163,12 +163,6 @@ export class Sprite {
   power(eventLoop: EventLoop) {
     if (!this.powerable) return;
     this.powered = true;
-    eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
-      for (const sprite of this.connectedOutputs(eventLoop.sprites)) {
-        sprite.power(eventLoop);
-      }
-      this.powered = false;
-    });
   }
 
   // Move this sprite so that the supplied output lines up with the supplied input of another sprite.
@@ -179,14 +173,18 @@ export class Sprite {
   }
 
   // Called at the start of every game tick, now is the time to update the internal state.
-  tickStart(eventLoop: EventLoop) {}
+  tickStart(eventLoop: EventLoop) {
+    this.powered = false;
+  }
 
   // Called at the end of every game tick, now is the time to update the internal state.
   tickEnd(eventLoop: EventLoop) {
     // Send power.
     if (this.powered) {
       for (const dest of this.connectedOutputs(eventLoop.sprites)) {
-        dest.power(eventLoop);
+        eventLoop.queue(atTick(eventLoop.currentTick + 1), async (event: Event) => {
+          dest.power(eventLoop);
+        });
       }
     }
   }
@@ -286,6 +284,14 @@ export class OptionWall extends Sprite {
       s.powered = s === this;
     }
   }
+
+  tickStart(eventLoop: EventLoop) {
+    // Don't ever reset power.
+  }
+
+  tickEnd(eventLoop: EventLoop) {
+    // Don't ever propagate power.
+  }
 }
 
 export class Text extends Sprite {
@@ -326,6 +332,9 @@ export class Boot extends Sprite {
 }
 
 export class AndGate extends Sprite {
+  // How many inputs provided power this tick.
+  private providedPower: number = 0;
+
   constructor(json?: any) {
     super(json);
     this.type = Sprites.AndGate;
@@ -370,21 +379,23 @@ export class AndGate extends Sprite {
     return boundingbox(this.pos.x - blockSize * 2, this.pos.y, blockSize * 3, blockSize);
   }
 
+  tickStart(eventLoop: EventLoop) {
+    super.tickStart(eventLoop);
+    this.providedPower = 0;
+  }
+
   power(eventLoop: EventLoop) {
-    this.powered = false;
-    let c = 0;
-    for (const sprite of this.connectedInputs(eventLoop.sprites)) {
-      if (sprite.powered) {
-        c++;
-      }
-    }
-    if (c >= 2) {
+    this.providedPower++;
+    if (this.providedPower >= 2) {
       super.power(eventLoop);
     }
   }
 }
 
 export class NotGate extends Sprite {
+  // Was this sprite provided power this tick?
+  private providedPower: boolean = false;
+
   constructor(json?: any) {
     super(json);
     this.type = Sprites.NotGate;
@@ -429,20 +440,18 @@ export class NotGate extends Sprite {
   }
 
   power(eventLoop: EventLoop) {
-    this.powered = true;
-    for (const sprite of this.connectedInputs(eventLoop.sprites)) {
-      if (sprite.powered) {
-        this.powered = false;
-        break;
-      }
-    }
-    if (this.powered) {
-      // super.power(eventLoop);
-    }
+    this.providedPower = true;
+    super.power(eventLoop);
   }
 
   tickStart(eventLoop: EventLoop) {
-    this.power(eventLoop);
+    super.tickStart(eventLoop);
+    this.providedPower = false;
+  }
+
+  tickEnd(eventLoop: EventLoop) {
+    this.powered = !this.providedPower;
+    super.tickEnd(eventLoop);
   }
 }
 

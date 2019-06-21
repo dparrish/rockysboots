@@ -112,20 +112,10 @@ export class EventLoop {
     const event = new Event(when, callback);
     if (event.when.time >= 0) {
       this.timeQueue.push(event);
-      this.timeQueue.sort((a: Event, b: Event): number => cmp(a.when.time, b.when.time));
+      this.timeQueue.sort((a: Event, b: Event): number => a.when.time - b.when.time);
     } else {
       this.tickQueue.push(event);
-      this.tickQueue.sort((a: Event, b: Event): number => cmp(a.when.tick, b.when.tick));
+      this.tickQueue.sort((a: Event, b: Event): number => a.when.tick - b.when.tick);
     }
   }
-}
-
-function cmp(a: number, b: number): number {
-  if (a < b) {
-    return -1;
-  }
-  if (a > b) {
-    return 1;
-  }
-  return 0;
 }

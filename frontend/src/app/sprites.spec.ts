@@ -1,5 +1,6 @@
+import * as _ from 'lodash';
 import {constants} from './constants/constants.module';
-import {EventLoop} from './event';
+import {atTick, Event, EventLoop} from './event';
 import {GameMap} from './game-map';
 import {newSprite, Sprite, Sprites} from './sprites';
 
@@ -141,21 +142,26 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should not provide power with 1 input powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '1', x: 1000, y: 1000, powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '1', x: 1000, y: 1000});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
+      injectPower(eventLoop, a);
+      await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
     });
 
     it('should provide power with 2 inputs powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '2', x: 1000, y: 1000, powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '2', x: 1000, y: 1000});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
-      const b = newSprite(map, {type: Sprites.ConnectorLeft, colour: '3', x: 1000, y: 1000, powered: true});
+      const b = newSprite(map, {type: Sprites.ConnectorLeft, colour: '3', x: 1000, y: 1000});
       eventLoop.sprites.push(b);
       b.connectOutputToInput(0, sprite, 1);
+      injectPower(eventLoop, a);
+      injectPower(eventLoop, b);
+      await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(true);
@@ -166,7 +172,7 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.NotGate, x: 0, y: 0, color: '0'});
+      sprite = newSprite(map, {type: Sprites.NotGate, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
       await eventLoop.tick();
     });
@@ -177,15 +183,16 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should provide power when not powered', async () => {
-      expect(sprite.powered).toEqual(true);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(true);
     });
 
     it('should not provide power when powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
+      injectPower(eventLoop, a);
+      await eventLoop.tick();
       expect(sprite.powered).toEqual(true);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
@@ -210,21 +217,28 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should provide power with 1 input powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '1', x: 1000, y: 1000, powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '1', x: 1000, y: 1000});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
+      injectPower(eventLoop, a);
+      await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(true);
+      await eventLoop.tick();
+      expect(sprite.powered).toEqual(false);
     });
 
     it('should provide power with 2 inputs powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '2', x: 1000, y: 1000, powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, colour: '2', x: 1000, y: 1000});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
-      const b = newSprite(map, {type: Sprites.ConnectorLeft, colour: '3', x: 1000, y: 1000, powered: true});
+      const b = newSprite(map, {type: Sprites.ConnectorLeft, colour: '3', x: 1000, y: 1000});
       eventLoop.sprites.push(b);
       b.connectOutputToInput(0, sprite, 1);
+      injectPower(eventLoop, a);
+      injectPower(eventLoop, b);
+      await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(true);
@@ -259,20 +273,44 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should not provide power when not powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: false});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
-      expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
     });
 
     it('should provide power when powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
+      injectPower(eventLoop, a);
       await eventLoop.tick();
+      expect(a.powered).toEqual(true);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(a.powered).toEqual(false);
       expect(sprite.powered).toEqual(true);
+    });
+
+    it('should steadily propagate power', async () => {
+      eventLoop.sprites.shift();
+      const connectors = [];
+      for (let i = 0; i < 4; i++) {
+        connectors.push(newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: i * 100, colour: `${i}`}));
+        eventLoop.sprites.push(connectors[i]);
+      }
+      for (let i = connectors.length - 2; i >= 0; i--) {
+        connectors[i].connectOutputToInput(0, connectors[i + 1], 0);
+      }
+      injectPower(eventLoop, connectors[0]);
+
+      while (eventLoop.currentTick < 5) {
+        await eventLoop.tick();
+        for (let i = 0; i < connectors.length; i++) {
+          expect(connectors[i].powered).toEqual(eventLoop.currentTick === i + 1);
+        }
+      }
     });
   });
 
@@ -280,7 +318,7 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, color: '0'});
+      sprite = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
     });
 
@@ -290,20 +328,44 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should not provide power when not powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, colour: '1', powered: false});
+      const a = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
-      expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
     });
 
     it('should provide power when powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, colour: '1', powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
+      injectPower(eventLoop, a);
       await eventLoop.tick();
+      expect(a.powered).toEqual(true);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(a.powered).toEqual(false);
       expect(sprite.powered).toEqual(true);
+    });
+
+    it('should steadily propagate power', async () => {
+      eventLoop.sprites.shift();
+      const connectors = [];
+      for (let i = 0; i < 4; i++) {
+        connectors.push(newSprite(map, {type: Sprites.ConnectorRight, x: 0, y: i * 100, colour: `${i}`}));
+        eventLoop.sprites.push(connectors[i]);
+      }
+      for (let i = connectors.length - 2; i >= 0; i--) {
+        connectors[i].connectOutputToInput(0, connectors[i + 1], 0);
+      }
+      injectPower(eventLoop, connectors[0]);
+
+      while (eventLoop.currentTick < 5) {
+        await eventLoop.tick();
+        for (let i = 0; i < connectors.length; i++) {
+          expect(connectors[i].powered).toEqual(eventLoop.currentTick === i + 1);
+        }
+      }
     });
   });
 
@@ -311,7 +373,7 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, color: '0'});
+      sprite = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
     });
 
@@ -321,20 +383,44 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should not provide power when not powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, colour: '1', powered: false});
+      const a = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
-      expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
     });
 
     it('should provide power when powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, colour: '1', powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
+      injectPower(eventLoop, a);
       await eventLoop.tick();
+      expect(a.powered).toEqual(true);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(a.powered).toEqual(false);
       expect(sprite.powered).toEqual(true);
+    });
+
+    it('should steadily propagate power', async () => {
+      eventLoop.sprites.shift();
+      const connectors = [];
+      for (let i = 0; i < 4; i++) {
+        connectors.push(newSprite(map, {type: Sprites.ConnectorUp, x: 0, y: i * 100, colour: `${i}`}));
+        eventLoop.sprites.push(connectors[i]);
+      }
+      for (let i = connectors.length - 2; i >= 0; i--) {
+        connectors[i].connectOutputToInput(0, connectors[i + 1], 0);
+      }
+      injectPower(eventLoop, connectors[0]);
+
+      while (eventLoop.currentTick < 5) {
+        await eventLoop.tick();
+        for (let i = 0; i < connectors.length; i++) {
+          expect(connectors[i].powered).toEqual(eventLoop.currentTick === i + 1);
+        }
+      }
     });
   });
 
@@ -342,7 +428,7 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, color: '0'});
+      sprite = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
     });
 
@@ -352,20 +438,44 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should not provide power when not powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, colour: '1', powered: false});
+      const a = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
-      expect(sprite.powered).toEqual(false);
       await eventLoop.tick();
       expect(sprite.powered).toEqual(false);
     });
 
     it('should provide power when powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, colour: '1', powered: true});
+      const a = newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       a.connectOutputToInput(0, sprite, 0);
+      injectPower(eventLoop, a);
       await eventLoop.tick();
+      expect(a.powered).toEqual(true);
+      expect(sprite.powered).toEqual(false);
+      await eventLoop.tick();
+      expect(a.powered).toEqual(false);
       expect(sprite.powered).toEqual(true);
+    });
+
+    it('should steadily propagate power', async () => {
+      eventLoop.sprites.shift();
+      const connectors = [];
+      for (let i = 0; i < 4; i++) {
+        connectors.push(newSprite(map, {type: Sprites.ConnectorDown, x: 0, y: i * 100, colour: `${i}`}));
+        eventLoop.sprites.push(connectors[i]);
+      }
+      for (let i = connectors.length - 2; i >= 0; i--) {
+        connectors[i].connectOutputToInput(0, connectors[i + 1], 0);
+      }
+      injectPower(eventLoop, connectors[0]);
+
+      while (eventLoop.currentTick < 5) {
+        await eventLoop.tick();
+        for (let i = 0; i < connectors.length; i++) {
+          expect(connectors[i].powered).toEqual(eventLoop.currentTick === i + 1);
+        }
+      }
     });
   });
 
@@ -373,7 +483,7 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.OptionWall, x: 0, y: 0, color: '0', powered: false});
+      sprite = newSprite(map, {type: Sprites.OptionWall, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
     });
 
@@ -383,11 +493,8 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should keep power when powered', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: true});
-      eventLoop.sprites.push(a);
-      a.connectOutputToInput(0, sprite, 0);
-      expect(sprite.powered).toEqual(false);
-      for (let i = 0; i < 10; i++) {
+      injectPower(eventLoop, sprite);
+      for (let i = 0; i < 5; i++) {
         await eventLoop.tick();
         expect(sprite.powered).toEqual(true);
       }
@@ -395,21 +502,26 @@ describe('Invidivual Sprites', () => {
 
     it('should only have a single selected OptionWall per map', async () => {
       const otherMap = new GameMap();
-      for (let i = 1; i <= 10; i++) {
-        const m = i > 5 ? map : otherMap;
-        const wall = newSprite(m, {type: Sprites.OptionWall, x: 0, y: 0, colour: `${i}`, powered: false});
-        eventLoop.sprites.push(wall);
-        const conn = newSprite(m, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: `${i}`, powered: true});
-        eventLoop.sprites.push(conn);
-        conn.connectOutputToInput(0, wall, 0);
+      for (let i = 1; i < 10; i++) {
+        const m = i < 5 ? map : otherMap;
+        eventLoop.sprites.push(newSprite(m, {type: Sprites.OptionWall, x: 0, y: i * 40, colour: `${i}`}));
       }
-      expect(sprite.powered).toEqual(false);
+      // Inject power into an OptionWall on this map.
+      injectPower(eventLoop, eventLoop.sprites[1]);
+      // Inject power into an OptionWall on a different map.
+      injectPower(eventLoop, eventLoop.sprites[7]);
       await eventLoop.tick();
-      let powered = 0;
-      for (const s of eventLoop.sprites) {
-        if (s.type === Sprites.OptionWall && s.map === map && s.powered) powered++;
-      }
-      expect(powered).toEqual(1);
+      expect(_.filter(eventLoop.sprites, (s: Sprite) => s.type === Sprites.OptionWall && s.map === map && s.powered)
+                 .length)
+          .toEqual(1);
+
+      // Move the selected OptionWall on each map.
+      injectPower(eventLoop, eventLoop.sprites[2]);
+      injectPower(eventLoop, eventLoop.sprites[8]);
+      await eventLoop.tick();
+      expect(_.filter(eventLoop.sprites, (s: Sprite) => s.type === Sprites.OptionWall && s.map === map && s.powered)
+                 .length)
+          .toEqual(1);
     });
   });
 
@@ -417,7 +529,7 @@ describe('Invidivual Sprites', () => {
     let sprite: Sprite;
 
     beforeEach(async () => {
-      sprite = newSprite(map, {type: Sprites.Clock, x: 0, y: 0, color: '0'});
+      sprite = newSprite(map, {type: Sprites.Clock, x: 0, y: 0, colour: '0'});
       eventLoop.sprites.push(sprite);
     });
 
@@ -427,7 +539,7 @@ describe('Invidivual Sprites', () => {
     });
 
     it('should provide power to a ConnectorLeft every 8 ticks', async () => {
-      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1', powered: false});
+      const a = newSprite(map, {type: Sprites.ConnectorLeft, x: 0, y: 0, colour: '1'});
       eventLoop.sprites.push(a);
       sprite.connectOutputToInput(0, a, 0);
       let connectorPowered = 0;
@@ -445,3 +557,9 @@ describe('Invidivual Sprites', () => {
     });
   });
 });
+
+function injectPower(eventLoop: EventLoop, sprite: Sprite) {
+  eventLoop.queue(atTick(0), async (event: Event) => {
+    sprite.power(eventLoop);
+  });
+}
